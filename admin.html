@@ -1,0 +1,34 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة التحكم</title><link rel="stylesheet" href="style.css"></head><body>
+<header>لوحة التحكم</header><div class="wrap">
+<div id="login"><input id="em" type="email" placeholder="الإيميل"><input id="pw" type="password" placeholder="الباسورد"><button onclick="login()">دخول</button> <span id="err"></span></div>
+<div id="app" style="display:none"><button class="red" onclick="logout()">خروج</button>
+<h3 id="ft">منتج جديد</h3><input type="hidden" id="id"><input id="name" placeholder="الاسم"><textarea id="desc" placeholder="الوصف"></textarea>
+<input id="price" type="number" placeholder="السعر"><input id="sale" type="number" placeholder="سعر الخصم (اختياري)">
+<label>الصورة</label><input id="file" type="file" accept="image/*"><button onclick="save()">حفظ</button> <button class="red" onclick="reset()">إلغاء</button> <span id="msg"></span>
+<h3>المنتجات</h3><table id="tb"></table></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script>
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const $=i=>document.getElementById(i);let items=[],img="";
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function login(){const {error}=await sb.auth.signInWithPassword({email:$("em").value,password:$("pw").value});
+if(error){$("err").textContent=error.message;return}show()}
+async function logout(){await sb.auth.signOut();location.reload()}
+async function show(){const {data}=await sb.auth.getSession();if(!data.session)return;$("login").style.display="none";$("app").style.display="block";load()}
+async function load(){const {data,error}=await sb.from("products").select("*").order("created_at",{ascending:false}).limit(2000);
+if(error){$("msg").textContent=error.message;return}items=data;
+$("tb").innerHTML="<tr><th></th><th>الاسم</th><th>السعر</th><th>ظاهر</th><th></th></tr>"+items.map(p=>`<tr><td><img src="${esc(p.image_url)}"></td><td>${esc(p.name)}</td><td>${p.sale_price??p.price}</td><td>${p.active?"نعم":"لا"}</td>
+<td><button onclick="edit('${p.id}')">تعديل</button> <button onclick="tog('${p.id}',${!p.active})">${p.active?"إخفاء":"إظهار"}</button> <button class="red" onclick="del('${p.id}')">حذف</button></td></tr>`).join("")}
+function edit(i){const p=items.find(x=>x.id==i);$("id").value=p.id;$("name").value=p.name;$("desc").value=p.description||"";$("price").value=p.price;$("sale").value=p.sale_price||"";img=p.image_url||"";$("ft").textContent="تعديل";scrollTo(0,0)}
+function reset(){["id","name","desc","price","sale","file"].forEach(i=>$(i).value="");img="";$("ft").textContent="منتج جديد"}
+async function save(){$("msg").textContent="جاري الحفظ...";const f=$("file").files[0];
+if(f){const path=Date.now()+"-"+f.name.replace(/[^a-zA-Z0-9.]/g,"_");const {error}=await sb.storage.from("product-images").upload(path,f);
+if(error){$("msg").textContent="خطأ الصورة: "+error.message;return}img=sb.storage.from("product-images").getPublicUrl(path).data.publicUrl}
+const row={name:$("name").value,description:$("desc").value,price:Number($("price").value),sale_price:$("sale").value?Number($("sale").value):null,image_url:img};
+if(!row.name||!row.price){$("msg").textContent="الاسم والسعر مطلوبين";return}
+const q=$("id").value?sb.from("products").update(row).eq("id",$("id").value):sb.from("products").insert(row);
+const {error}=await q;if(error){$("msg").textContent="خطأ: "+error.message;return}$("msg").textContent="تم الحفظ";reset();load()}
+async function tog(i,v){await sb.from("products").update({active:v}).eq("id",i);load()}
+async function del(i){if(confirm("متأكد من الحذف؟")){await sb.from("products").delete().eq("id",i);load()}}
+show();
+</script></body></html>
