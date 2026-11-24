@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مطبخي بالجملة</title><link rel="stylesheet" href="style.css"></head><body>
+<header>مطبخي بالجملة</header><div class="wrap"><input id="q" placeholder="ابحث عن منتج..."><div id="grid" class="grid">جاري التحميل...</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script>
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let all=[];
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function draw(){const t=document.getElementById("q").value.trim();const l=all.filter(p=>p.name.includes(t));
+document.getElementById("grid").innerHTML=l.length?l.map(p=>{const msg=encodeURIComponent("عايز أطلب: "+p.name);
+return `<div class="card"><img src="${esc(p.image_url)}" alt=""><div><b>${esc(p.name)}</b><p>${esc(p.description)}</p>
+<span class="price">${p.sale_price??p.price} جنيه</span>${p.sale_price?`<span class="old">${p.price}</span>`:""}<br><br>
+<a class="btn" href="https://wa.me/${WHATSAPP}?text=${msg}">اطلب واتساب</a></div></div>`}).join(""):"لا توجد منتجات";}
+(async()=>{const {data,error}=await sb.from("products").select("*").eq("active",true).order("created_at",{ascending:false}).limit(2000);
+if(error){document.getElementById("grid").textContent="خطأ: "+error.message;return}all=data;draw()})();
+document.getElementById("q").oninput=draw;
+</script></body></html>
