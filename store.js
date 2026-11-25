@@ -165,8 +165,10 @@
   async function initCoupon() {
     try { if (couponOn === null) { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/coupons_active", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: "{}" }); couponOn = (await r.json()) === true } } catch (e) { couponOn = false }
     const box = $("cpbox"); if (!box || !couponOn) return; box.hidden = false;
+    if (!coupon && !window.__noAuto) { try { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/auto_coupon", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_subtotal: sub() }) }); const c = await r.json(); if (typeof c === "string" && c) { const r2 = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/check_coupon", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_code: c, p_subtotal: sub() }) }); const j = await r2.json(); if (j && j.ok) { coupon = { code: c, disc: Number(j.discount), auto: true }; refreshTotals() } } } catch (e) {} }
     if (coupon) { $("cpin").value = coupon.code; $("cpmsg").textContent = "تم تطبيق الخصم"; $("cpmsg").className = "ok" }
     $("cpgo").onclick = async () => {
+      window.__noAuto = true;
       const code = $("cpin").value.trim().toUpperCase(), m = $("cpmsg"); m.className = "msg"; m.textContent = "";
       if (!code) { coupon = null; refreshTotals(); return }
       $("cpgo").disabled = true;
@@ -219,7 +221,7 @@
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
       try { sessionStorage.setItem("trk", phone) } catch (x) {}
-      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
+      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }
