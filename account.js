@@ -39,7 +39,7 @@
     body().innerHTML = '<h3>استرجاع كلمة السر</h3><p class="accm">اكتب إيميل حسابك وهنبعتلك رابط تغيّر منه كلمة السر.</p><form id="fgf" novalidate><label>الإيميل</label><input id="fg_e" type="email" dir="ltr" autocomplete="email"><p class="accerr" id="fg_err"></p><button class="btn big" id="fg_s" type="submit">إرسال الرابط</button></form><p class="accm"><a href="#" id="fg_b">رجوع لتسجيل الدخول</a></p>';
     $("fg_b").onclick = e => { e.preventDefault(); authView("login") };
     $("fgf").onsubmit = async e => { e.preventDefault(); const em = $("fg_e").value.trim(), err = $("fg_err"), b = $("fg_s"); err.textContent = ""; err.className = "accerr"; if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) { err.textContent = "اكتب إيميل صحيح"; return } b.disabled = true; b.textContent = "لحظة...";
-      try { await arpc("request_password_reset", { p_email: em }); err.className = "accm"; err.textContent = "لو الإيميل ده مسجل عندنا، هيوصلك رابط استرجاع خلال دقيقة (راجع Spam كمان). الرابط صالح لمدة ساعة."; b.textContent = "تم الإرسال" }
+      try { await arpc("request_password_reset", { p_email: em, p_origin: location.origin }); err.className = "accm"; err.textContent = "لو الإيميل ده مسجل عندنا، هيوصلك رابط استرجاع خلال دقيقة (راجع Spam كمان). الرابط صالح لمدة ساعة."; b.textContent = "تم الإرسال" }
       catch (x) { err.textContent = /[\u0600-\u06FF]/.test(x.message) ? x.message : "تعذر الإرسال، حاول تاني"; b.disabled = false; b.textContent = "إرسال الرابط" } } }
   function resetView(tk) {
     ov.hidden = false; document.body.style.overflow = "hidden";
