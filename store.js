@@ -179,3 +179,10 @@
   };
   render();
 })();
+
+// product gallery: click a thumbnail to swap the main image
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("#thumbs button"); if (!b) return;
+  const m = document.getElementById("gmain"); if (!m) return;
+  m.src = b.dataset.src; document.querySelectorAll("#thumbs button").forEach(x => x.classList.toggle("on", x === b));
+});

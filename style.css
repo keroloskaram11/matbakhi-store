@@ -108,3 +108,7 @@ header.top .hl{color:#fff;font-size:13px;text-decoration:none;border:1px solid #
 .formbox{padding:14px;max-width:560px}.qin{width:58px;margin:0;padding:5px;text-align:center}.tn{color:#0f766e}
 footer .fl a{color:var(--primary)}.rp{text-align:right;max-width:600px;margin:8px auto}
 @media(min-width:760px){.stick{display:none}body{padding-bottom:0}}
+
+.thumbs{display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:4px}.thumbs button{flex:0 0 64px;width:64px;height:64px;padding:0;border:2px solid transparent;border-radius:10px;overflow:hidden;background:#fff;cursor:pointer}.thumbs button.on{border-color:var(--primary)}.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.rich{overflow-wrap:anywhere}.rich img{max-width:100%;height:auto;border-radius:10px;display:block;margin:8px auto}.rich table{border-collapse:collapse;max-width:100%;display:block;overflow-x:auto}.rich td,.rich th{border:1px solid #ddd;padding:6px 10px}.rich h2,.rich h3,.rich h4{margin:14px 0 6px}.rich ul,.rich ol{padding-inline-start:22px}.rich a{color:var(--primary);text-decoration:underline}.rich blockquote{margin:10px 0;padding:8px 14px;border-inline-start:4px solid var(--primary);background:#faf6f2}
+.socs{display:flex;justify-content:center;gap:10px;margin:12px 0}.socs .soc{display:inline-flex;line-height:0;transition:transform .15s}.socs .soc:hover{transform:scale(1.1)}.fcats{margin:8px 0;font-size:14px}.fcats a{color:var(--primary)}
