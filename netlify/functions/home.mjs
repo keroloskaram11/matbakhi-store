@@ -22,7 +22,16 @@ export default async (req, context) => {
     cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
     const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
     const csTm = await L.tiersFor(csData.flat().filter((p, i, a) => a.findIndex(y => y.id === p.id) === i));
+    const bgOf = v => /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : "";
+    const lnkOk = v => /^(\/(?!\/)|https:\/\/)/.test(String(v || ""));
+    const cust = layoutCfg.filter(x => x.k === "cat" && x.on && x.slug).map(x => ({ x, c: cats.find(c => c.slug === x.slug), n: Math.min(24, Math.max(2, Number(x.n) || 8)) })).filter(y => y.c).slice(0, 12);
+    const custData = await Promise.all(cust.map(y => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(y.c.id)}&order=created_at.desc&limit=${y.n}`).catch(() => [])));
+    const custTm = await L.tiersFor(custData.flat().filter((p, i, a) => a.findIndex(y => y.id === p.id) === i));
     const sec = {
+      cat: x => { const i = cust.findIndex(y => y.x === x); if (i < 0 || !custData[i].length) return ""; const y = cust[i], bg = bgOf(x.bg), cols = [1, 2, 3].includes(+x.cols) ? +x.cols : 2, cards = L.cardsHtml(custData[i], custTm);
+        return `<section class="csec${bg ? " cbg" : ""}"${bg ? ` style="background:${bg}"` : ""}><div class="csec-h"><h2 class="sec">${L.esc(String(x.title || "").trim().slice(0, 60) || y.c.name)}</h2>${x.more === false ? "" : `<a class="csec-m" href="/c/${L.esc(encodeURIComponent(y.c.slug))}">عرض الكل</a>`}</div>${x.layout === "scroll" ? `<div class="hscroll gc${cols}">${cards}</div>` : `<div class="grid gc${cols}">${cards}</div>`}</section>` },
+      text: x => { const t = String(x.title || "").trim().slice(0, 80), b = String(x.body || "").trim().slice(0, 1500); if (!t && !b) return ""; const bg = bgOf(x.bg); return `<section class="txs${bg ? " cbg" : ""}"${bg ? ` style="background:${bg}"` : ""}>${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}${b ? `<p>${L.esc(b)}</p>` : ""}</section>` },
+      banner: x => { const im = L.safeUrl(x.img); if (!im) return ""; const img = `<img src="${L.esc(im)}" alt="${L.esc(String(x.alt || "").slice(0, 120))}" loading="lazy">`; return `<section class="bns">${lnkOk(x.link) ? `<a href="${L.esc(x.link)}">${img}</a>` : img}</section>` },
       intro: () => L.introHtml(S),
       reviews: () => L.reviewsHtml(S),
       chats: () => L.chatsHtml(S),
@@ -43,7 +52,7 @@ export default async (req, context) => {
       latest: () => `<section><h2 class="sec">أحدث المنتجات</h2><div class="grid">${L.cardsHtml(latest, tm)}</div><p style="text-align:center"><a class="btn gray" href="/products">عرض كل المنتجات</a></p></section>`,
       about: () => `<section class="about"><h2>عن ${L.esc(name)}</h2><p>${L.esc(S.seo_description || "")} نوصل لجميع محافظات مصر والدفع عند الاستلام. نبيع جملة وقطاعي، <a href="/wholesale">اطلب عرض سعر جملة</a>.</p></section>`
     };
-    const main = `<div id="secs">${layoutCfg.filter(x => x.on && sec[x.k]).map(x => sec[x.k]()).join("")}</div>
+    const main = `<div id="secs">${layoutCfg.filter(x => x.on && sec[x.k]).map(x => sec[x.k](x)).join("")}</div>
 <section id="res" hidden><h2 class="sec" id="gt"></h2><div id="grid" class="grid"></div></section>`;
     return L.send(L.layout({
       req, S, cats, zonesList: Z, title, desc, path: "/", currentCat: null,
