@@ -32,8 +32,8 @@ ${tierTbl}
 ${out ? `<button class="btn big" disabled>نفذت الكمية</button>` : `<label class="ql">الكمية <input id="pq" type="number" inputmode="numeric" min="${min}" max="5000" value="${min}"></label><button class="btn add big" id="mainadd" ${attrs}>أضف للسلة</button>`}
 ${wa ? `<a class="btn wa2" data-wa data-name="${L.esc(p.name)}" data-price="${L.esc(pr)}" href="https://wa.me/${L.esc(wa)}?text=${msg}" target="_blank" rel="noopener">اطلب عبر واتساب</a>` : ""}
 <p class="muted">تشتري بالجملة؟ <a href="/wholesale">اطلب عرض سعر</a></p>
-${S.return_policy ? `<h2>الاسترجاع</h2><p class="desc">${L.esc(S.return_policy)}</p>` : ""}
-${p.description ? `<h2>وصف المنتج</h2><div class="desc rich">${L.descHtml(p.description)}</div>` : ""}</div></article>
+${p.description ? `<h2>وصف المنتج</h2><div class="desc rich">${L.descHtml(p.description)}</div>` : ""}
+${S.return_policy ? `<details class="rp prp"><summary>سياسة الاسترجاع</summary><p class="desc">${L.esc(S.return_policy).replace(/\n/g, "<br>")}</p></details>` : ""}</div></article>
 ${related.length ? `<h2 class="sec">منتجات مشابهة</h2><div class="grid">${L.cardsHtml(related, tm, 0)}</div>` : ""}
 ${out ? "" : `<div class="stick" id="stick"><div><b>${L.esc(L.cut(p.name, 28))}</b><span class="price">${L.fmt(pr)} جنيه</span></div><button class="btn" id="stickadd" ${attrs}>أضف للسلة</button></div>`}`;
     return L.send(L.layout({ req, S, cats, zonesList: Z, title: `${p.name} | ${name}`, desc, path, ld, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.name, image: img } }));
