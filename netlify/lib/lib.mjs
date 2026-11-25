@@ -168,7 +168,7 @@ ${prev ? `<link rel="prev" href="${esc(b + prev)}">` : ""}${next ? `<link rel="n
 ${ogImg ? `<meta property="og:image" content="${esc(ogImg)}">` : ""}
 <meta name="twitter:card" content="${ogImg ? "summary_large_image" : "summary"}"><meta name="twitter:title" content="${esc(og.title || title)}"><meta name="twitter:description" content="${esc(desc)}">
 ${favicon ? `<link rel="icon" href="${esc(favicon)}">` : ""}
-<link rel="preconnect" href="https://vezbhmmufmvgquoujylm.supabase.co" crossorigin><link rel="preconnect" href="https://assets.wuiltstore.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://vezbhmmufmvgquoujylm.supabase.co" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${FONTS[font]}&display=swap">
 <link rel="stylesheet" href="/style.css">
 <style>:root{--primary:${color};--accent:${accent};--font:'${font}';--logo:${logoPx}px${bgc ? `;--bg:${bgc}` : ""}}</style>
@@ -184,7 +184,7 @@ ${footCats.length ? `<nav class="fcats" aria-label="الأقسام">${footCats.m
 <p>© ${new Date().getFullYear()} ${esc(name)} - مصر</p></footer>
 <nav class="bnav" aria-label="التنقل"><a href="/" class="${path === "/" ? "on" : ""}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>الرئيسية</span></a><a href="/products" class="${path === "/products" || path.startsWith("/products?") || path.startsWith("/c/") ? "on" : ""}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg><span>متجر</span></a></nav>
 <button class="trkfab" id="trkfab" type="button" aria-label="تتبع طلبك">&#128666; تتبع طلبك</button>
-<a class="fab" id="fab" href="#" target="_blank" rel="noopener" aria-label="واتساب"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.3 2.5 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l2 1c.3.1.5.2.5.3.1.2.1.8-.2 1.3z"/></svg></a>
+
 <script>window.__S=${inlineJson(publicS)};window.SUPABASE_URL=${inlineJson(SUPABASE_URL)};window.SUPABASE_KEY=${inlineJson(SUPABASE_KEY)};window.__Z=${inlineJson(zs)};</script>
 <script src="/store.js" defer></script>
 </body></html>`;
