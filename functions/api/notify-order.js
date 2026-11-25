@@ -96,7 +96,7 @@ export const onRequestPost = async ({ request, env }) => {
 // GET /api/notify-order?k=<order key>: public invoice PDF for the customer's own order (key is the random id made in their browser).
 export const onRequestGet = async ({ request, env }) => {
   const k = new URL(request.url).searchParams.get("k") || "";
-  if (k.length < 8 || k.length > 80) return new Response("not found", { status: 404 });
+  if (k.length < 8 || k.length > 80) return new Response("not found", { status: 404, headers: { "cache-control": "no-store", "referrer-policy": "no-referrer" } });
   const H = { apikey: KEY, "Content-Type": "application/json" };
   const r = await (await fetch(`${SB}/rpc/invoice_by_key`, { method: "POST", headers: H, body: JSON.stringify({ p_key: k }) })).json().catch(() => null);
   if (!r || !r.order || !(r.items || []).length) return new Response("not found", { status: 404 });
@@ -107,5 +107,5 @@ export const onRequestGet = async ({ request, env }) => {
     body: JSON.stringify({ html: invoiceHtml(r.order, r.items.slice(0, 30), st), gotoOptions: { waitUntil: "networkidle0", timeout: 20000 }, pdfOptions: { format: "a4", printBackground: true, preferCSSPageSize: true } })
   });
   if (!pr.ok) return new Response("try again", { status: 502 });
-  return new Response(await pr.arrayBuffer(), { headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="invoice-${r.order.order_no}.pdf"`, "cache-control": "private, max-age=600", "x-robots-tag": "noindex" } });
+  return new Response(await pr.arrayBuffer(), { headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="invoice-${r.order.order_no}.pdf"`, "cache-control": "no-store, private", "pragma": "no-cache", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "x-robots-tag": "noindex, nofollow, noarchive" } });
 };
