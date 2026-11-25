@@ -140,7 +140,7 @@ function layout({ req, S, cats, zonesList, title, desc, path, og = {}, ld = [], 
   const logoPx = { s: 32, m: 40, l: 56 }[S.logo_size] || 40;
   const bodyCls = [S.product_cols_mobile === "1" ? "pc1" : "", S.card_img === "tall" ? "cimg-tall" : "", S.card_badge === "0" ? "nobadge" : "", S.card_tier === "0" ? "notier" : "", S.card_radius === "l" ? "cr-l" : S.card_radius === "s" ? "cr-s" : ""].filter(Boolean).join(" ");
   const logo = safeUrl(S.logo_url), favicon = safeUrl(S.favicon_url) || logo, ogImg = safeUrl(og.image) || safeUrl(S.hero_image_url) || logo;
-  const publicS = {}; const zs = zonesList || []; ["store_name", "whatsapp", "meta_pixel_id", "tiktok_pixel_id", "ga_id", "shipping_fee", "free_shipping_min", "primary_color", "accent_color"].forEach(k => (publicS[k] = S[k] || ""));
+  const publicS = {}; const zs = zonesList || []; ["store_name", "whatsapp", "meta_pixel_id", "tiktok_pixel_id", "ga_id", "shipping_fee", "free_shipping_min", "payment_methods", "primary_color", "accent_color"].forEach(k => (publicS[k] = S[k] || ""));
   const menuCats = (cats || []).filter(c => c.show_menu !== false), footCats = (cats || []).filter(c => c.show_footer === true);
   let navx = []; try { navx = JSON.parse(S.nav_extra || "[]") } catch (e) {}
   navx = (Array.isArray(navx) ? navx : []).filter(x => x && String(x.text || "").trim() && /^(\/(?!\/)|https:\/\/)/.test(String(x.link || ""))).slice(0, 8);
