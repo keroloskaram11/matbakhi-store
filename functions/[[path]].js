@@ -17,5 +17,12 @@ export const onRequest = async (c) => {
   else if (p === "/robots.txt") h = robots;
   else if (p === "/llms.txt") h = llms;
   if (!h) return c.next();
-  return h(c.request, c);
+  const r = await h(c.request, c);
+  const n = new Response(r.body, r);
+  n.headers.set("X-Content-Type-Options", "nosniff");
+  n.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  n.headers.set("X-Frame-Options", "SAMEORIGIN");
+  n.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  n.headers.set("Strict-Transport-Security", "max-age=31536000");
+  return n;
 };
