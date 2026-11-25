@@ -309,3 +309,19 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .offpct{background:#d62828;color:#fff;border-radius:6px;padding:2px 8px;font-size:14px;font-weight:700;margin-right:8px}
 .card .badge:not(.gr){background:#d62828;color:#fff}
 .pimg .badge:not(.gr){background:#d62828;color:#fff}
+/* customer account */
+.accbtn{background:#ffffff26;color:#fff;border:0;border-radius:20px;padding:7px 12px;font:700 13px var(--font),sans-serif;display:flex;align-items:center;gap:5px;cursor:pointer;margin-inline-start:6px}
+.accov{position:fixed;inset:0;background:#0009;z-index:70;display:flex;align-items:flex-end;justify-content:center}
+.accov[hidden]{display:none}
+.accbox{background:#fff;width:min(460px,100%);max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 16px 22px;position:relative}
+@media(min-width:700px){.accov{align-items:center}.accbox{border-radius:18px}}
+.accx{position:absolute;top:8px;left:12px;border:0;background:none;font-size:28px;cursor:pointer;color:#666}
+.accbox h3{margin:4px 0 10px}.accbox label{display:block;margin:8px 0 3px;font-size:13px;color:#444}
+.accbox input,.accbox textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font:inherit;box-sizing:border-box}
+.acctabs{display:flex;gap:6px;margin:8px 0 10px}.acctabs button{flex:1;padding:8px;border:1px solid #ddd;background:#f6f6f6;border-radius:10px;font:700 13px var(--font),sans-serif;cursor:pointer}.acctabs button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.accerr{color:#c0392b;font-size:13px;min-height:16px;margin:6px 0}.accm{color:#666;font-size:12.5px;margin:8px 0}
+.accwal{display:flex;justify-content:space-between;align-items:center;background:#fff7e6;border:1px solid #f3d9a4;border-radius:12px;padding:12px 14px;margin:6px 0}.accwal b{font-size:20px;color:#92400e}
+.accord{border:1px solid #eee;border-radius:12px;padding:10px;margin:8px 0}.accord ul{margin:6px 0 0;padding-inline-start:18px;font-size:13px;color:#555}
+.accrow{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:14px}.accrow small{display:block;color:#888;font-size:11px}.led{border-bottom:1px solid #eee;padding:8px 0}
+.accrow b.pos{color:#15803d}.accrow b.neg{color:#c0392b}
+#acclo{margin-top:14px;width:100%}.walrow{margin:8px 0}.walchk{display:flex!important;align-items:center;gap:8px;background:#fff7e6;border:1px solid #f3d9a4;border-radius:10px;padding:10px;color:#92400e!important;font-weight:700}.walchk input{width:auto!important}

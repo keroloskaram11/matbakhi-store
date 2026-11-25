@@ -47,7 +47,8 @@
   const methods = () => { try { const a = JSON.parse(S.payment_methods || "[]"); return Array.isArray(a) ? a.filter(m => m && (m.on === true || m.on === "1" || m.on === "true") && m.id && m.name && (m.kind === "cod" || String(m.detail || "").trim())) : [] } catch (e) { return [] } };
   const payKind = () => { const m = methods().find(x => x.id === payId); return m ? m.kind : "cod" };
   const btnText = () => (payKind() === "cod" ? "تأكيد الطلب - الدفع عند الاستلام" : "تأكيد الطلب");
-  const totalNow = () => { const g = $("cg") ? $("cg").value : "", sh = shipFor(g); return sh == null ? null : sub() - couponDisc() + sh };
+  const totalNow0 = () => { const g = $("cg") ? $("cg").value : "", sh = shipFor(g); return sh == null ? null : sub() - couponDisc() + sh };
+  const totalNow = totalNow0; window.__mkTotal = () => totalNow0();
   try { cart = JSON.parse(localStorage.getItem("cart") || "[]").filter(i => i && i.id && i.qty > 0) } catch (e) {}
   const save = () => { coupon = null; try { localStorage.setItem("cart", JSON.stringify(cart)) } catch (e) {} };
   const unit = (i, q) => { let p = i.price; (i.tiers || []).forEach(t => { if (q >= t[0] && t[1] < p) p = t[1] }); return p };
@@ -243,7 +244,8 @@
     if (!okPh(phone2)) return fail("اكتب رقم موبايل آخر صحيح (مثال 01001234567)"); if (!/^(\+?20|0020|0)?1[0125]\d{8}$/.test(phone.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "").replace(/^/, ""))) return fail("رقم الموبايل غير صحيح (مثال 01001234567)");
     if (!$("cg").value) return fail("اختر المحافظة"); if (addr.length < 8) return fail("اكتب العنوان بالتفصيل");
     let proof = null, ref = null;
-    if (payKind() !== "cod") {
+    const useWal = !!($("usewal") && $("usewal").checked && window.MKAuth && window.MKAuth.logged), walAll = useWal && totalNow() != null && window.MKAuth.balance >= totalNow();
+    if (payKind() !== "cod" && !walAll) {
       ref = ($("payref").value || "").trim(); const f = $("payfile").files[0];
       if (!f && !proofPath) return fail("لازم ترفع صورة التحويل (سكرين شوت) عشان نأكد الدفع");
       if (f) { btn.disabled = true; btn.textContent = "جاري رفع الصورة..."; try { proof = await uploadProof(f) } catch (e) { btn.disabled = false; btn.textContent = btnText(); return fail("تعذر رفع الصورة، جرب صورة تانية") } } else { proof = proofPath }
@@ -252,13 +254,13 @@
     let key = sessionStorage.getItem("ckey"); if (!key) { key = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", key) }
     const snapshot = cart.map(i => ({ id: i.id, name: i.name, price: unitOf(i), qty: i.qty }));
     try {
-      const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length ? payId : null, p_pay_ref: ref, p_pay_proof: proof, p_email: email, p_phone2: phone2 }) });
+      const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json", Authorization: "Bearer " + ((useWal && await window.MKAuth.token()) || window.SUPABASE_KEY) },
+        body: JSON.stringify({ p_use_wallet: useWal, p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length && !walAll ? payId : null, p_pay_ref: ref, p_pay_proof: proof, p_email: email, p_phone2: phone2 }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
       try { sessionStorage.setItem("trk", phone) } catch (x) {}
-      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
+      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${Number(j.wallet_used) > 0 ? `<p>اتخصم <b>${fmt(j.wallet_used)} جنيه</b> من رصيد محفظتك${Number(j.remaining) > 0 ? `، والباقي <b>${fmt(j.remaining)} جنيه</b>` : ", والطلب اتدفع بالكامل"}.</p>` : ""}${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.remaining != null ? j.remaining : j.total)} جنيه</b>` : (Number(j.remaining) === 0 ? `الإجمالي: <b>${fmt(j.total)} جنيه</b> (مدفوع من المحفظة)` : `الإجمالي: <b>${fmt(j.total)} جنيه</b>${Number(j.wallet_used) > 0 ? `، المطلوب عند الاستلام <b>${fmt(j.remaining)} جنيه</b>` : " (الدفع عند الاستلام)"}`)}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }
