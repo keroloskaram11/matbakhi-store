@@ -277,10 +277,28 @@
       try { sessionStorage.setItem("trk", phone) } catch (x) {}
       $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${Number(j.wallet_used) > 0 ? `<p>اتخصم <b>${fmt(j.wallet_used)} جنيه</b> من رصيد محفظتك${Number(j.remaining) > 0 ? `، والباقي <b>${fmt(j.remaining)} جنيه</b>` : ", والطلب اتدفع بالكامل"}.</p>` : ""}${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.remaining != null ? j.remaining : j.total)} جنيه</b>` : (Number(j.remaining) === 0 ? `الإجمالي: <b>${fmt(j.total)} جنيه</b> (مدفوع من القسيمة / رصيد الحساب)` : `الإجمالي: <b>${fmt(j.total)} جنيه</b>${Number(j.wallet_used) > 0 ? `، المطلوب عند الاستلام <b>${fmt(j.remaining)} جنيه</b>` : " (الدفع عند الاستلام)"}`)}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
+      if (j.order_no && payKind() === "cod" && j.payment_status !== "paid" && Number(j.remaining != null ? j.remaining : j.total) > 0) payOnline(j.order_no, phone);
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }
   }
 
+
+  /* ---------- optional online payment (shown only when the owner enabled a gateway and saved its keys) ---------- */
+  async function payOnline(orderNo, phone) {
+    try {
+      const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/pay_public_methods", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: "{}" });
+      const m = await r.json(); const L = [["card", "بطاقة بنكية"], ["wallet", "محفظة موبايل"], ["valu", "valU تقسيط"], ["applepay", "Apple Pay"], ["opay", "OPay"]].filter(x => m && m[x[0]]);
+      if (!L.length || !$("dbody")) return;
+      const box = document.createElement("div"); box.className = "payon";
+      box.innerHTML = '<p><b>تحب تدفع أونلاين دلوقتي؟</b> (اختياري، وتقدر تدفع عند الاستلام)</p><div class="payb">' + L.map(x => '<button type="button" data-pm="' + x[0] + '">' + x[1] + "</button>").join("") + '</div><p class="payerr" style="color:#c0392b"></p>';
+      $("dbody").appendChild(box);
+      box.querySelectorAll("[data-pm]").forEach(b => b.onclick = async () => {
+        b.disabled = true; box.querySelector(".payerr").textContent = "";
+        try { const rr = await fetch("/api/pay/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order_no: orderNo, phone, method: b.dataset.pm }) }); const jj = await rr.json(); if (!rr.ok || !jj.url) throw new Error(jj.error || "تعذر بدء الدفع"); location.href = jj.url }
+        catch (e) { box.querySelector(".payerr").textContent = e.message; b.disabled = false }
+      });
+    } catch (e) { }
+  }
   /* ---------- search: Arabic-tolerant, suggestions with thumbnails ---------- */
   const norm = t => String(t || "").toLowerCase().replace(/[\u064B-\u065F\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\s+/g, " ").trim();
   window.__norm = norm;

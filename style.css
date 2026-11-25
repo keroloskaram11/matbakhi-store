@@ -332,3 +332,4 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 #vbox{margin:8px 0}
 .rich iframe,.rich video{display:block;max-width:100%;width:100%;aspect-ratio:16/9;height:auto;border:0;border-radius:12px;margin:12px 0}
 .rich h5,.rich h6{margin:12px 0 6px}.rich pre{background:#f4f1ec;padding:10px;border-radius:8px;overflow:auto;direction:ltr}
+.payon{margin-top:16px;padding:14px;border:1px dashed #ccc;border-radius:14px}.payb{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.payb button{padding:10px 16px;border-radius:12px}
