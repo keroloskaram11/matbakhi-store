@@ -10,12 +10,13 @@ export default async (req, context) => {
     const related = p.category_id ? (await L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(p.category_id)}&id=neq.${encodeURIComponent(p.id)}&order=created_at.desc&limit=8`)) : [];
     const tm = await L.tiersFor([p, ...related]);
     const tiers = tm[String(p.id)] || [], min = p.min_order_qty || 1, out = p.in_stock === false;
-    const pr = L.price(p), sale = L.isSale(p), img = L.safeUrl(p.image_url);
+    const pr = L.price(p), sale = L.isSale(p), imgs = L.imagesOf(p), img = imgs[0] || "";
+    const plain = L.toText(p.description || "");
     const path = "/p/" + encodeURIComponent(p.slug);
     const crumbs = [["الرئيسية", "/"], ...(cat ? [[cat.name, "/c/" + encodeURIComponent(cat.slug)]] : [["كل المنتجات", "/products"]]), [p.name, path]];
-    const desc = L.cut(p.description || `اشتري ${p.name} من ${name} بسعر ${L.fmt(pr)} جنيه مصري. توصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
+    const desc = L.cut(plain || `اشتري ${p.name} من ${name} بسعر ${L.fmt(pr)} جنيه مصري. توصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
     const ld = [
-      { "@context": "https://schema.org", "@type": "Product", name: p.name, ...(img ? { image: [img] } : {}), description: L.cut(p.description || p.name, 500), sku: String(p.id), ...(cat ? { category: cat.name } : {}), brand: { "@type": "Brand", name },
+      { "@context": "https://schema.org", "@type": "Product", name: p.name, ...(imgs.length ? { image: imgs } : {}), description: L.cut(plain || p.name, 500), sku: String(p.id), ...(cat ? { category: cat.name } : {}), brand: { "@type": "Brand", name },
         offers: { "@type": "Offer", url: b + path, priceCurrency: "EGP", price: pr.toFixed(2), availability: out ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", eligibleRegion: { "@type": "Country", name: "EG" }, seller: { "@type": "Organization", name } } },
       L.crumbLd(b, crumbs), L.orgLd(b, S)];
     const wa = String(S.whatsapp || "").replace(/\D/g, "");
@@ -23,7 +24,7 @@ export default async (req, context) => {
     const attrs = `data-add data-id="${L.esc(p.id)}" data-name="${L.esc(p.name)}" data-price="${L.esc(pr)}" data-image="${L.esc(img)}" data-slug="${L.esc(p.slug)}" data-min="${min}" data-tiers="${L.esc(JSON.stringify(tiers.map(x => [x.min_qty, +x.unit_price])))}"`;
     const tierTbl = tiers.length ? `<h2>أسعار الكمية (جملة)</h2><table class="tiers"><tr><th>الكمية</th><th>سعر القطعة</th><th></th></tr><tr><td>1+</td><td>${L.fmt(pr)} جنيه</td><td></td></tr>${tiers.map(t => `<tr><td>${t.min_qty}+</td><td><b>${L.fmt(t.unit_price)} جنيه</b></td><td>${L.esc(t.label || "")}</td></tr>`).join("")}</table>` : "";
     const main = `${L.crumbHtml(crumbs)}
-<article class="prod"><div class="pimg">${img ? `<img src="${L.esc(img)}" alt="${L.esc(p.name)}" width="800" height="800" fetchpriority="high">` : `<div class="ph"></div>`}${sale ? `<span class="badge">خصم ${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>
+<article class="prod"><div class="pgal"><div class="pimg">${img ? `<img id="gmain" src="${L.esc(img)}" alt="${L.esc(p.name)}" width="800" height="800" fetchpriority="high">` : `<div class="ph"></div>`}${sale ? `<span class="badge">خصم ${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${imgs.length > 1 ? `<div class="thumbs" id="thumbs">${imgs.map((u, i) => `<button type="button" class="${i ? "" : "on"}" data-src="${L.esc(u)}" aria-label="صورة ${i + 1}"><img src="${L.esc(u)}" alt="${L.esc(p.name)} - ${i + 1}" width="64" height="64" loading="lazy"></button>`).join("")}</div>` : ""}</div>
 <div class="pinfo"><h1>${L.esc(p.name)}</h1>${cat ? `<p class="muted">القسم: <a href="/c/${L.esc(encodeURIComponent(cat.slug))}">${L.esc(cat.name)}</a></p>` : ""}
 <div class="pr big"><span class="price">${L.fmt(pr)} جنيه</span>${sale ? `<span class="old">${L.fmt(p.price)}</span>` : ""}</div>
 <p class="muted">${out ? "نفذت الكمية حالياً" : "متوفر"} - التوصيل لجميع محافظات مصر - الدفع عند الاستلام${min > 1 ? ` - أقل كمية للطلب ${min}` : ""}</p>
@@ -32,7 +33,7 @@ ${out ? `<button class="btn big" disabled>نفذت الكمية</button>` : `<la
 ${wa ? `<a class="btn wa2" data-wa data-name="${L.esc(p.name)}" data-price="${L.esc(pr)}" href="https://wa.me/${L.esc(wa)}?text=${msg}" target="_blank" rel="noopener">اطلب عبر واتساب</a>` : ""}
 <p class="muted">تشتري بالجملة؟ <a href="/wholesale">اطلب عرض سعر</a></p>
 ${S.return_policy ? `<h2>الاسترجاع</h2><p class="desc">${L.esc(S.return_policy)}</p>` : ""}
-${p.description ? `<h2>وصف المنتج</h2><p class="desc">${L.esc(p.description).replace(/\n/g, "<br>")}</p>` : ""}</div></article>
+${p.description ? `<h2>وصف المنتج</h2><div class="desc rich">${L.descHtml(p.description)}</div>` : ""}</div></article>
 ${related.length ? `<h2 class="sec">منتجات مشابهة</h2><div class="grid">${L.cardsHtml(related, tm, 0)}</div>` : ""}
 ${out ? "" : `<div class="stick" id="stick"><div><b>${L.esc(L.cut(p.name, 28))}</b><span class="price">${L.fmt(pr)} جنيه</span></div><button class="btn" id="stickadd" ${attrs}>أضف للسلة</button></div>`}`;
     return L.send(L.layout({ req, S, cats, zonesList: Z, title: `${p.name} | ${name}`, desc, path, ld, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.name, image: img } }));

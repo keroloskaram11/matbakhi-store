@@ -6,6 +6,7 @@ export default async (req, context) => {
       L.rest(`products?select=${L.PCOLS}&active=eq.true&order=created_at.desc&limit=24`),
       L.rest(`products?select=${L.PCOLS}&active=eq.true&featured=eq.true&order=created_at.desc&limit=12`)]);
     const tm = await L.tiersFor([...latest, ...featured].filter((p, i, a) => a.findIndex(x => x.id === p.id) === i));
+    const homeCats = cats.filter(c => c.show_home !== false);
     const b = L.baseUrl(req, S), name = S.store_name || "المتجر";
     const title = name + (S.tagline ? " | " + S.tagline : "");
     const desc = L.cut(S.seo_description || S.tagline || name, 160);
@@ -15,7 +16,7 @@ export default async (req, context) => {
     let layoutCfg = DEFAULT; try { const j = JSON.parse(S.home_layout || ""); if (Array.isArray(j) && j.length) layoutCfg = j } catch (e) {}
     const sec = {
       trust: () => L.trustHtml(S),
-      categories: () => cats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${cats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "",
+      categories: () => homeCats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${homeCats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "",
       featured: () => featured.length ? `<section><h2 class="sec">منتجات مميزة</h2><div class="grid">${L.cardsHtml(featured, tm)}</div></section>` : "",
       latest: () => `<section><h2 class="sec">أحدث المنتجات</h2><div class="grid">${L.cardsHtml(latest, tm)}</div><p style="text-align:center"><a class="btn gray" href="/products">عرض كل المنتجات</a></p></section>`,
       about: () => `<section class="about"><h2>عن ${L.esc(name)}</h2><p>${L.esc(S.seo_description || "")} نوصل لجميع محافظات مصر والدفع عند الاستلام. نبيع جملة وقطاعي، <a href="/wholesale">اطلب عرض سعر جملة</a>.</p></section>`
