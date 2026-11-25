@@ -26,8 +26,8 @@ $("tf").onsubmit=function(e){e.preventDefault();var err=$("terr"),res=$("tres"),
  fetch(window.SUPABASE_URL+"/rest/v1/rpc/track_order",{method:"POST",headers:{apikey:window.SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({p_order_no:Number(no),p_phone:ph})})
  .then(function(r){return r.json()}).then(function(j){b.disabled=false;b.textContent="عرض حالة الطلب";
   if(!j||!j.ok){err.textContent=(j&&j.message&&/[\\u0600-\\u06FF]/.test(j.message))?j.message:"تعذر عرض الطلب، حاول تاني";return}
-  var cancelled=j.status==="ملغي",step=0;STEPS.forEach(function(s,i){if(s[0]===j.status||(j.status==="تم التحصيل"&&i===3))step=i});
-  var html='<h3>طلب رقم #'+Number(no)+'</h3><p class="muted">تاريخ الطلب: '+dmy(j.created_at)+'</p><p><b>'+(MSG[j.status]||j.status)+'</b></p>';
+  var PAY={pending:"الدفع: بانتظار تأكيد الدفع",paid:"الدفع: تم تأكيد الدفع"};var cancelled=j.status==="ملغي",step=0;STEPS.forEach(function(s,i){if(s[0]===j.status||(j.status==="تم التحصيل"&&i===3))step=i});
+  var html='<h3>طلب رقم #'+Number(no)+'</h3><p class="muted">تاريخ الطلب: '+dmy(j.created_at)+'</p><p><b>'+(MSG[j.status]||j.status)+'</b></p>'+(PAY[j.pay]?'<p class="muted">'+PAY[j.pay]+(j.method?' ('+String(j.method).replace(/[<>&]/g,'')+')':'')+'</p>':'');
   if(!cancelled)html+='<ol class="trk">'+STEPS.map(function(s,i){return '<li class="'+(i<=step?"on":"")+'"><span>'+(i<=step?"&#10003;":i+1)+'</span>'+s[1]+'</li>'}).join("")+'</ol>';
   res.innerHTML=html;res.hidden=false}).catch(function(){b.disabled=false;b.textContent="عرض حالة الطلب";err.textContent="تعذر الاتصال، حاول تاني"})};
 })();</script>`;
