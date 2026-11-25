@@ -229,6 +229,7 @@ function ordersView(){
  ${list.slice(0,100).map(x=>{const s=stOf(x.status_id)||{},pf=orderProfit(x);return `<div class="ord"><div class="h"><b>#${x.order_no} ${esc(x.customer_name)}</b>${x.source==="web"?` <span class="pill" style="background:#0891b2">من الموقع</span>`:""}<span>${esc(x.order_date)}</span></div>
   <div>${esc(x.phone)} ${x.phone?`<a href="https://wa.me/${esc(String(x.phone).replace(/\D/g,"").replace(/^0/,"20"))}" target="_blank" rel="noopener">واتساب</a>`:""}</div><div>${esc(x.governorate?x.governorate+" - ":"")}${esc(x.address)}</div>
   <div>${(x.order_items||[]).map(i=>esc(i.product_name)+" × "+i.qty).join("، ")}</div>${x.notes?`<div class="hint">ملاحظة العميل: ${esc(x.notes)}</div>`:""}${x.admin_notes?`<div class="hint">ملاحظتي: ${esc(x.admin_notes)}</div>`:""}
+  <div>المنتجات: ${fmt((x.order_items||[]).reduce((a,i)=>a+Number(i.qty)*Number(i.unit_price),0))} + الشحن على العميل: ${fmt(Math.max(0,Number(x.total)-(x.order_items||[]).reduce((a,i)=>a+Number(i.qty)*Number(i.unit_price),0)))}</div>
   <div>الإجمالي: <b>${fmt(x.total)}</b> | الربح: <b class="${pf>=0?"pos":"neg"}">${fmt(pf)}</b></div>
   <div class="row" style="margin-top:6px;align-items:center"><select class="st" data-id="${esc(x.id)}" style="border-color:${esc(s.color)}">${D.statuses.map(t=>`<option value="${esc(t.id)}" ${t.id===x.status_id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
   <button class="sm" data-e="${esc(x.id)}">تعديل</button><button class="sm red" data-d="${esc(x.id)}">حذف</button></div></div>`}).join("")||"<p>لا توجد طلبات</p>"}
