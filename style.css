@@ -300,3 +300,12 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .cw .cw-t{font-size:11px;color:#444;background:#fffc;border-radius:8px;padding:1px 6px}
 @keyframes cwin{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
 @media(max-width:700px){.cw{bottom:140px}}
+
+/* discount display */
+.price.sale{color:#d62828}
+.old{text-decoration:line-through;color:#8a8a8a}
+.save{color:#d62828;font-size:12px;font-weight:700;margin-top:2px}
+.save.big{font-size:16px;margin:2px 0 6px}
+.offpct{background:#d62828;color:#fff;border-radius:6px;padding:2px 8px;font-size:14px;font-weight:700;margin-right:8px}
+.card .badge:not(.gr){background:#d62828;color:#fff}
+.pimg .badge:not(.gr){background:#d62828;color:#fff}
