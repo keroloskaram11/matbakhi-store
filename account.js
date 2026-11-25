@@ -17,6 +17,7 @@
   }
   const api = async (path, opt = {}) => { const t = await token(); if (!t) throw new Error("auth"); const r = await fetch(A + path, { ...opt, headers: { apikey: K, Authorization: "Bearer " + t, "Content-Type": "application/json", ...(opt.headers || {}) } }); const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.message) || "err"); return j };
   const rpc = (n, b) => api("/rest/v1/rpc/" + n, { method: "POST", body: JSON.stringify(b || {}) });
+  const arpc = async (n, b) => { const r = await fetch(A + "/rest/v1/rpc/" + n, { method: "POST", headers: { apikey: K, "Content-Type": "application/json" }, body: JSON.stringify(b || {}) }); const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.message) || "err"); return j };
   async function loadProfile() { try { const j = await api("/rest/v1/customer_profiles?select=*&user_id=eq." + sess.user.id); prof = j && j[0] || {}; } catch (e) { prof = prof || {} } try { wallet = await rpc("my_wallet") } catch (e) { wallet = null } }
   async function saveProfile(p) { prof = { ...(prof || {}), ...p }; await api("/rest/v1/customer_profiles?on_conflict=user_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ user_id: sess.user.id, full_name: prof.full_name || null, phone: prof.phone || null, phone2: prof.phone2 || null, address: prof.address || null, governorate: prof.governorate || null, updated_at: new Date().toISOString() }) }) }
   window.MKAuth = { token, get logged() { return !!sess }, get balance() { return wallet && wallet.ok ? Number(wallet.balance) || 0 : 0 }, get profile() { return prof }, refresh: async () => { if (sess) await loadProfile() } };
@@ -34,12 +35,25 @@
   ov.querySelector(".accx").onclick = close; ov.onclick = e => { if (e.target === ov) close() };
   btn.onclick = async () => { open(); if (sess) { body().innerHTML = '<p class="accm">جاري التحميل...</p>'; await loadProfile(); account("orders") } else authView("login") };
 
+  function forgotView() {
+    body().innerHTML = '<h3>استرجاع كلمة السر</h3><p class="accm">اكتب إيميل حسابك وهنبعتلك رابط تغيّر منه كلمة السر.</p><form id="fgf" novalidate><label>الإيميل</label><input id="fg_e" type="email" dir="ltr" autocomplete="email"><p class="accerr" id="fg_err"></p><button class="btn big" id="fg_s" type="submit">إرسال الرابط</button></form><p class="accm"><a href="#" id="fg_b">رجوع لتسجيل الدخول</a></p>';
+    $("fg_b").onclick = e => { e.preventDefault(); authView("login") };
+    $("fgf").onsubmit = async e => { e.preventDefault(); const em = $("fg_e").value.trim(), err = $("fg_err"), b = $("fg_s"); err.textContent = ""; err.className = "accerr"; if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) { err.textContent = "اكتب إيميل صحيح"; return } b.disabled = true; b.textContent = "لحظة...";
+      try { await arpc("request_password_reset", { p_email: em }); err.className = "accm"; err.textContent = "لو الإيميل ده مسجل عندنا، هيوصلك رابط استرجاع خلال دقيقة (راجع Spam كمان). الرابط صالح لمدة ساعة."; b.textContent = "تم الإرسال" }
+      catch (x) { err.textContent = /[\u0600-\u06FF]/.test(x.message) ? x.message : "تعذر الإرسال، حاول تاني"; b.disabled = false; b.textContent = "إرسال الرابط" } } }
+  function resetView(tk) {
+    ov.hidden = false; document.body.style.overflow = "hidden";
+    body().innerHTML = '<h3>كلمة سر جديدة</h3><form id="rsf" novalidate><label>كلمة السر الجديدة</label><input id="rs_w" type="password" dir="ltr" autocomplete="new-password" minlength="6"><p class="accerr" id="rs_err"></p><button class="btn big" id="rs_s" type="submit">حفظ كلمة السر</button></form>';
+    $("rsf").onsubmit = async e => { e.preventDefault(); const err = $("rs_err"), b = $("rs_s"), pw = $("rs_w").value; err.textContent = ""; if (pw.length < 6) { err.textContent = "كلمة السر 6 حروف أو أرقام على الأقل"; return } b.disabled = true; b.textContent = "لحظة...";
+      try { await arpc("reset_password", { p_token: tk, p_password: pw }); history.replaceState(null, "", location.pathname); body().innerHTML = '<h3>تم تغيير كلمة السر</h3><p class="accm">تقدر دلوقتي تسجل دخول بكلمة السر الجديدة.</p><button class="btn big" id="rs_go" type="button">تسجيل الدخول</button>'; $("rs_go").onclick = () => authView("login") }
+      catch (x) { err.textContent = /[\u0600-\u06FF]/.test(x.message) ? x.message : "تعذر الحفظ، اطلب رابط جديد"; b.disabled = false; b.textContent = "حفظ كلمة السر" } } }
   function authView(mode) {
     const su = mode === "signup";
     body().innerHTML = `<h3>${su ? "إنشاء حساب" : "تسجيل الدخول"}</h3><div class="acctabs"><button type="button" data-m="login" class="${su ? "" : "on"}">دخول</button><button type="button" data-m="signup" class="${su ? "on" : ""}">إنشاء حساب</button></div>
 <form id="accf" novalidate>${su ? '<label>الاسم</label><input id="af_n" autocomplete="name" maxlength="60"><label>رقم الموبايل</label><input id="af_p" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX">' : ""}
 <label>الإيميل</label><input id="af_e" type="email" dir="ltr" autocomplete="email"><label>الباسورد</label><input id="af_w" type="password" dir="ltr" autocomplete="${su ? "new-password" : "current-password"}" minlength="6">
-<p class="accerr" id="af_err"></p><button class="btn big" id="af_s" type="submit">${su ? "إنشاء الحساب" : "دخول"}</button></form><p class="accm">${su ? "الحساب بيخليك تتابع طلباتك وتستخدم رصيد الحساب / قسيمة الشراء. ولسه تقدر تشتري كزائر من غير حساب." : "تقدر تشتري كزائر من غير حساب."}</p>`;
+<p class="accerr" id="af_err"></p><button class="btn big" id="af_s" type="submit">${su ? "إنشاء الحساب" : "دخول"}</button></form><p class="accm">${su ? "الحساب بيخليك تتابع طلباتك وتستخدم رصيد الحساب / قسيمة الشراء. ولسه تقدر تشتري كزائر من غير حساب." : "تقدر تشتري كزائر من غير حساب."}</p>${su ? "" : '<p class="accm"><a href="#" id="af_fg">هل نسيت كلمة السر؟</a></p>'}`;
+    const fg = $("af_fg"); if (fg) fg.onclick = e => { e.preventDefault(); forgotView() };
     body().querySelectorAll(".acctabs button").forEach(b => b.onclick = () => authView(b.dataset.m));
     $("accf").onsubmit = async e => {
       e.preventDefault(); const err = $("af_err"), b = $("af_s"); err.textContent = "";
@@ -90,5 +104,6 @@
     const bal = window.MKAuth.balance; if (bal > 0) { row.innerHTML = `<label class="walchk"><input type="checkbox" id="usewal"> ادفع من رصيد الحساب / قسيمة الشراء (متاح ${fmt(bal)} جنيه)</label><p class="accm" id="walnote"></p>`; sb.parentNode.insertBefore(row, sb); const upd = () => { const t = window.__mkTotal && window.__mkTotal(), n = $("walnote"); if (!n) return; if (!$("usewal").checked || t == null) { n.textContent = ""; return } n.textContent = bal >= t ? "الطلب كله هيتدفع من رصيد الحساب." : "هيتخصم " + fmt(bal) + " جنيه من رصيد الحساب والباقي " + fmt(t - bal) + " جنيه بطريقة الدفع المختارة." }; row.addEventListener("change", upd); f.addEventListener("change", upd) }
   };
   new MutationObserver(hook).observe(document.body, { childList: true, subtree: true }); hook();
+  try { const rt = new URLSearchParams(location.search).get("reset"); if (rt && /^[0-9a-f]{64}$/.test(rt)) { setTimeout(() => { if (sess) { save(null); prof = wallet = null; draw() } resetView(rt) }, 300) } } catch (e) {}
   if (sess) token().then(t => { if (t) loadProfile() });
 })();
