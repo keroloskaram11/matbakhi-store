@@ -15,9 +15,11 @@ export default async (req, context) => {
     const slider = L.heroSliderHtml(S, name);
     const hero = slider || `<section class="hero ${hi ? "img" : ""}" ${hi ? `style="background-image:url('${L.esc(hi.replace(/'/g, "%27"))}')"` : ""}><h1>${L.esc(S.hero_title || name)}</h1><p>${L.esc(S.hero_subtitle || "")}</p>${cta}</section>`;
     let layoutCfg = DEFAULT; try { const j = JSON.parse(S.home_layout || ""); if (Array.isArray(j) && j.length) layoutCfg = j } catch (e) {}
+    if (S.home_layout_v !== "2") {
     ["catsecs", "reviews", "intro"].forEach(k => { if (!layoutCfg.some(x => x.k === k)) layoutCfg = [{ k, on: true }, ...layoutCfg] });
     if (!layoutCfg.some(x => x.k === "chats")) { const ai = layoutCfg.findIndex(x => x.k === "about"); layoutCfg = [...layoutCfg.slice(0, ai >= 0 ? ai : layoutCfg.length), { k: "chats", on: true }, ...layoutCfg.slice(ai >= 0 ? ai : layoutCfg.length)]; }
     if (!layoutCfg.some(x => x.k === "track")) { const ti = layoutCfg.findIndex(x => x.k === "trust"); layoutCfg = [...layoutCfg.slice(0, ti >= 0 ? ti + 1 : 1), { k: "track", on: true }, ...layoutCfg.slice(ti >= 0 ? ti + 1 : 1)]; }
+    }
     let cs = []; try { cs = JSON.parse(S.home_cat_sections || "[]") } catch (e) {}
     cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
     const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
@@ -33,6 +35,9 @@ export default async (req, context) => {
       catrow: x => { const n = Math.min(4, Math.max(1, Number(x.cols) || (x.items || []).length || 2)); const its = (Array.isArray(x.items) ? x.items : []).slice(0, n).map(i => ({ c: cats.find(c => c.slug === (i && i.slug)), t: String((i && i.t) || "").slice(0, 160) })).filter(i => i.c); if (!its.length) return "";
         const t = String(x.title || "").trim().slice(0, 60);
         return `<section class="cgs">${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}<div class="cg c${n}">${its.map(i => `<a class="cgi" href="/c/${L.esc(encodeURIComponent(i.c.slug))}">${L.safeUrl(i.c.image_url) ? `<img src="${L.esc(i.c.image_url)}" alt="${L.esc(i.c.name)}" loading="lazy">` : `<span class="cgp">${L.esc(i.c.name.slice(0, 1))}</span>`}<b>${L.esc(i.c.name)}</b>${i.t ? `<small>${L.esc(i.t)}</small>` : ""}</a>`).join("")}</div></section>` },
+      code: x => { const h = String(x.html || "").slice(0, 20000); if (!h.trim()) return "";
+        const doc = `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><base target="_blank"><style>body{margin:0;font-family:system-ui,sans-serif}</style></head><body>${h}<script>(function(){function p(){parent.postMessage({ocode:1,h:document.documentElement.scrollHeight},"*")}addEventListener("load",p);try{new ResizeObserver(p).observe(document.body)}catch(e){}setTimeout(p,300)})()</script></body></html>`;
+        return `<section class="codes"><iframe class="codef" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" loading="lazy" referrerpolicy="no-referrer" title="محتوى" srcdoc="${L.esc(doc)}" style="width:100%;border:0;height:120px"></iframe></section>` },
       video: x => { const m = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/.exec(String(x.url || "")); if (!m) return ""; const t = String(x.title || "").trim().slice(0, 80);
         return `<section class="vid">${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}<div class="vidf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="${L.esc(t || "فيديو")}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></section>` },
       text: x => { const t = String(x.title || "").trim().slice(0, 80), b = String(x.body || "").trim().slice(0, 1500); if (!t && !b) return ""; const bg = bgOf(x.bg); return `<section class="txs${bg ? " cbg" : ""}"${bg ? ` style="background:${bg}"` : ""}>${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}${b ? `<p>${L.esc(b)}</p>` : ""}</section>` },
