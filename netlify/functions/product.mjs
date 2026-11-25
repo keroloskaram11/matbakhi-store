@@ -32,7 +32,7 @@ export default async (req, context) => {
     const main = `${L.crumbHtml(crumbs)}
 <article class="prod"><div class="pgal"><div class="pimg">${img ? `<img id="gmain" src="${L.esc(img)}" alt="${L.esc(p.name)}" width="800" height="800" fetchpriority="high">` : `<div class="ph"></div>`}${sale ? `<span class="badge">خصم ${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${imgs.length > 1 ? `<div class="thumbs" id="thumbs">${imgs.map((u, i) => `<button type="button" class="${i ? "" : "on"}" data-src="${L.esc(u)}" aria-label="صورة ${i + 1}"><img src="${L.esc(u)}" alt="${L.esc(p.name)} - ${i + 1}" width="64" height="64" loading="lazy"></button>`).join("")}</div>` : ""}</div>
 <div class="pinfo"><h1>${L.esc(p.name)}</h1>${cat ? `<p class="muted">القسم: <a href="/c/${L.esc(encodeURIComponent(cat.slug))}">${L.esc(cat.name)}</a></p>` : ""}
-<div class="pr big"><span class="price">${L.fmt(pr)} جنيه</span>${sale ? `<span class="old">${L.fmt(p.price)}</span>` : ""}</div>
+<div class="pr big"><span class="price${sale ? " sale" : ""}">${L.fmt(pr)} جنيه</span>${sale ? `<span class="old">${L.fmt(p.price)}</span><span class="offpct">-${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${sale ? `<div class="save big">وفّر ${L.fmt(p.price - pr)} جنيه</div>` : ""}
 <p class="muted">${out ? "نفذت الكمية حالياً" : "متوفر"} - التوصيل لجميع محافظات مصر - الدفع عند الاستلام${min > 1 ? ` - أقل كمية للطلب ${min}` : ""}</p>
 ${varHtml}
 ${tierTbl}
