@@ -47,3 +47,4 @@ main{flex:1;margin-right:230px;min-width:0}
 .oc .ohd{cursor:pointer;padding:2px 0}.oh1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.oh2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:14px}
 .stb{color:#fff;border-radius:14px;padding:4px 14px;font-size:14px;font-weight:700;white-space:nowrap}.chev{margin-inline-start:auto;color:#888}
 .oc .obody{border-top:1px solid #eee;margin-top:10px;padding-top:6px}.oc .obody[hidden]{display:none}.oc{border-inline-start:4px solid transparent}.oc.open{border-inline-start-color:#7c3f1d}
+.vbadge{vertical-align:-3px}
