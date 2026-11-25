@@ -1,1 +1,1 @@
-{"version":1,"include":["/","/products","/c/*","/p/*","/wholesale","/sitemap.xml","/robots.txt","/llms.txt"],"exclude":[]}
+{"version":1,"include":["/","/products","/c/*","/p/*","/wholesale","/sitemap.xml","/robots.txt","/llms.txt","/api/*"],"exclude":[]}
