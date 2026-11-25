@@ -45,6 +45,9 @@
   const save = () => { coupon = null; try { localStorage.setItem("cart", JSON.stringify(cart)) } catch (e) {} };
   const unit = (i, q) => { let p = i.price; (i.tiers || []).forEach(t => { if (q >= t[0] && t[1] < p) p = t[1] }); return p };
   const unitOf = i => unit(i, i.qty);
+  let varIds = null; const loadVarIds = () => (varIds = varIds || fetch(window.SUPABASE_URL + "/rest/v1/product_variants?select=product_id", { headers: { apikey: window.SUPABASE_KEY } }).then(r => r.json()).then(j => new Set(Array.isArray(j) ? j.map(x => x.product_id) : [])).catch(() => new Set()));
+  setTimeout(loadVarIds, 800);
+  document.addEventListener("change", e => { const r = e.target.closest && e.target.closest("[name=var]"); if (!r) return; const p = r.dataset.price; document.querySelectorAll(".pinfo .pr .price,.stick .price").forEach(el => el.textContent = Number(p).toLocaleString("en-US") + " جنيه"); const o = document.querySelector(".pinfo .pr .old"); if (o) o.textContent = r.dataset.old ? Number(r.dataset.old).toLocaleString("en-US") : "" });
   const sub = () => cart.reduce((a, i) => a + i.qty * unitOf(i), 0);
   const freeMin = () => parseFloat(S.free_shipping_min) || 0;
   const zones = window.__Z || [];
@@ -52,7 +55,7 @@
   const shipFor = g => (freeMin() > 0 && sub() >= freeMin() ? 0 : zoneFee(g));
   function add(it, qty) {
     const min = it.min || 1; qty = Math.max(min, Math.min(5000, parseInt(qty) || min));
-    const x = cart.find(c => c.id === it.id); if (x) x.qty = Math.min(5000, x.qty + qty); else cart.push({ ...it, qty });
+    const x = cart.find(c => c.id === it.id && (c.vid || "") === (it.vid || "")); if (x) x.qty = Math.min(5000, x.qty + qty); else cart.push({ ...it, qty });
     save(); render(); track("AddToCart", { value: unit(it, qty) * qty, items: [{ id: it.id, name: it.name, price: unit(it, qty), qty }] }); toast("تمت الإضافة للسلة");
   }
   function toast(t) { let e = $("toast"); if (!e) { e = document.createElement("div"); e.id = "toast"; document.body.appendChild(e) } e.textContent = t; e.className = "show"; clearTimeout(toast.t); toast.t = setTimeout(() => (e.className = ""), 1600) }
@@ -64,7 +67,11 @@
   function close() { $("ov").hidden = true; $("drawer").hidden = true }
   $("ov").onclick = close; $("dclose").onclick = close; $("cartBtn").onclick = open;
   document.addEventListener("click", e => {
-    const a = e.target.closest("[data-add]"); if (a) { let tiers = []; try { tiers = JSON.parse(a.dataset.tiers || "[]") } catch (x) {} const pq = $("pq"); add({ id: a.dataset.id, name: a.dataset.name, price: Number(a.dataset.price), image: a.dataset.image, slug: a.dataset.slug, min: parseInt(a.dataset.min) || 1, tiers }, pq && a.closest(".pinfo,.stick") ? pq.value : 0); return }
+    const a = e.target.closest("[data-add]"); if (a) { let tiers = []; try { tiers = JSON.parse(a.dataset.tiers || "[]") } catch (x) {} const pq = $("pq"); const inPage = a.closest(".pinfo,.stick"); const base = { id: a.dataset.id, name: a.dataset.name, price: Number(a.dataset.price), image: a.dataset.image, slug: a.dataset.slug, min: parseInt(a.dataset.min) || 1, tiers };
+      let vars = []; try { vars = JSON.parse(a.dataset.vars || "[]") } catch (x) {}
+      if (vars.length) { const r = document.querySelector("[name=var]:checked"); if (!r) { toast("اختر الخيار الأول"); const v = $("vars"); if (v) v.scrollIntoView({ block: "center" }); return } const v = vars.find(x => x.id === r.value); if (!v) return; base.vid = v.id; base.name = base.name + " - " + v.label; base.price = v.price; add(base, pq && inPage ? pq.value : 0); return }
+      if (!inPage) { loadVarIds().then(set => { if (set.has(base.id)) location.href = "/p/" + encodeURIComponent(base.slug); else add(base, 0) }); return }
+      add(base, pq && inPage ? pq.value : 0); return }
     const w = e.target.closest("[data-wa]"); if (w) track("Lead", { name: w.dataset.name, value: Number(w.dataset.price) });
   });
   function render() {
@@ -167,7 +174,7 @@
     const snapshot = cart.map(i => ({ id: i.id, name: i.name, price: unitOf(i), qty: i.qty }));
     try {
       const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length ? payId : null, p_pay_ref: ref, p_pay_proof: proof }) });
+        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length ? payId : null, p_pay_ref: ref, p_pay_proof: proof }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");

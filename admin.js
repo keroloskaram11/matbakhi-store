@@ -28,7 +28,7 @@ async function start(){
  const h=location.hash.slice(1);go(NAV.some(n=>n[0]===h)?h:"home");
 }
 async function loadAll(){
- const [products,costs,tiers,orders,wh,cats,sts,set,zones]=await Promise.all([
+ const [products,costs,tiers,orders,wh,cats,sts,set,zones,vars]=await Promise.all([
   fetchAll(()=>sb.from("products").select("*").order("created_at",{ascending:false})),
   fetchAll(()=>sb.from("product_costs").select("*")),
   fetchAll(()=>sb.from("product_price_tiers").select("*").order("min_qty")),
@@ -37,10 +37,11 @@ async function loadAll(){
   sb.from("categories").select("*").order("sort_order").order("name"),
   sb.from("order_statuses").select("*").order("sort_order"),
   sb.from("settings").select("key,value"),
-  sb.from("shipping_zones").select("*").order("sort_order")]);
+  sb.from("shipping_zones").select("*").order("sort_order"),
+  fetchAll(()=>sb.from("product_variants").select("*").order("sort_order").order("created_at"))]);
  for(const r of [cats,sts,set,zones])if(r.error)throw r.error;
  D.products=products;D.costs={};costs.forEach(c=>D.costs[c.product_id]=c.cost);D.tiers={};tiers.forEach(t=>(D.tiers[t.product_id]=D.tiers[t.product_id]||[]).push(t));
- D.orders=orders;D.wholesale=wh;D.cats=cats.data;D.statuses=sts.data;D.zones=zones.data;D.settings={};set.data.forEach(r=>D.settings[r.key]=r.value);
+ D.vars={};vars.forEach(v=>(D.vars[v.product_id]=D.vars[v.product_id]||[]).push(v));D.orders=orders;D.wholesale=wh;D.cats=cats.data;D.statuses=sts.data;D.zones=zones.data;D.settings={};set.data.forEach(r=>D.settings[r.key]=r.value);
 }
 const newStatusId=()=>(D.statuses[0]||{}).id;
 const newOrders=()=>D.orders.filter(o=>o.status_id===newStatusId()).length;
@@ -126,6 +127,10 @@ V.products=()=>{
  <div class="row"><div><label>التصنيف</label><select id="pcat">${catOpts(p.category_id)}</select></div><div><label>أقل كمية للطلب</label><input id="pmoq" type="number" inputmode="numeric" min="1" value="${esc(p.min_order_qty||1)}"></div></div>
  <h4>أسعار الجملة حسب الكمية (اختياري)</h4><p class="hint">مثال: من 10 قطع سعر القطعة 90، من 24 (كرتونة) سعر القطعة 80. السلة تحسب السعر تلقائياً حسب الكمية.</p>
  <div id="tiers">${ts.map(tierRow).join("")}</div><button class="sm gray" id="tadd" type="button">+ شريحة سعر</button>
+ <h4>الخيارات (متغيرات: اللون / المقاس / ...) اختياري</h4><p class="hint">لو ضفت خيارات، العميل لازم يختار واحد قبل الإضافة للسلة. اكتب اسم الخيار زي "أحمر / كبير". السعر فاضي = نفس سعر المنتج. الخيار المتوقف مش بيظهر للشراء.</p>
+ <div id="vrows">${((editP&&D.vars[String(editP.id)])||[]).map(varRow).join("")}</div><button class="sm gray" id="vadd" type="button">+ خيار</button>
+ <h4>المواصفات (خصائص المنتج) اختياري</h4><p class="hint">مثال: الخامة: ستانلس ستيل، البلد: مصر. بتظهر جدول في صفحة المنتج.</p>
+ <div id="arows">${(Array.isArray(p.attributes)?p.attributes:[]).map(attrRow).join("")}</div><button class="sm gray" id="aadd" type="button">+ خاصية</button>
  <label style="margin-top:10px">صور المنتج (حتى 12، الأولى هي الرئيسية)</label><div id="gal" class="gal"></div><input id="pfs" type="file" accept="image/*" multiple><span id="gm" class="msg"></span>
  <div class="row"><label><input type="checkbox" id="pa" ${editP?(p.active?"checked":""):"checked"}>ظاهر في المتجر</label><label><input type="checkbox" id="pst" ${editP?(p.in_stock!==false?"checked":""):"checked"}>متوفر</label><label><input type="checkbox" id="pfe" ${p.featured?"checked":""}>منتج مميز (يظهر في الرئيسية)</label></div>
  <button id="psave">حفظ</button> <button class="gray" id="pcancel">إلغاء</button> <span id="pm"></span></div>
@@ -139,6 +144,8 @@ V.products=()=>{
  $("pexp").onclick=()=>csv("products-"+today()+".csv",[PH].concat(list.map(x=>{const im=Array.isArray(x.images)&&x.images.length?x.images:(x.image_url?[x.image_url]:[]);const c=D.costs[String(x.id)];return [x.slug||"",x.name,x.description||"",x.sku||"",x.in_stock===false?"out of stock":"available",x.price,x.sale_price??"",c??"",im.join(" "),x.active?"ACTIVE":"DRAFT",catName(x.category_id)==="-"?"":catName(x.category_id)]})));
  $("ptpl").onclick=()=>csv("products-template.csv",[PH,["example-product","اسم المنتج","وصف المنتج","","available","100","","60","https://example.com/image1.jpg","ACTIVE","اسم القسم"]]);
  if($("pmore"))$("pmore").onclick=()=>{lim+=100;V.products()};
+ const wireV=()=>{document.querySelectorAll(".v-x").forEach(b=>b.onclick=()=>b.closest(".vrow").remove());document.querySelectorAll(".a-x").forEach(b=>b.onclick=()=>b.closest(".arow").remove())};wireV();
+ $("vadd").onclick=()=>{$("vrows").insertAdjacentHTML("beforeend",varRow({in_stock:true}));wireV()};$("aadd").onclick=()=>{$("arows").insertAdjacentHTML("beforeend",attrRow({}));wireV()};
  const wireT=()=>document.querySelectorAll(".t-x").forEach(b=>b.onclick=()=>b.closest(".tier").remove());wireT();
  $("tadd").onclick=()=>{$("tiers").insertAdjacentHTML("beforeend",tierRow({}));wireT()};
  drawGal();$("impopen").onclick=()=>{impMode=true;V.import()};
@@ -151,11 +158,13 @@ V.products=()=>{
  document.querySelectorAll("#view [data-tg]").forEach(b=>b.onclick=async()=>{const x=find(b.dataset.tg);const {error}=await sb.from("products").update({active:!x.active}).eq("id",x.id);if(error)return alert(error.message);x.active=!x.active;V.products()});
  document.querySelectorAll("#view [data-d]").forEach(b=>b.onclick=async()=>{const x=find(b.dataset.d);if(!confirm("حذف المنتج: "+x.name+"؟"))return;const {error}=await sb.from("products").delete().eq("id",x.id);if(error)return alert(error.message);const k=String(x.id);await sb.from("product_costs").delete().eq("product_id",k);await sb.from("product_price_tiers").delete().eq("product_id",k);D.products=D.products.filter(y=>y!==x);V.products()});
 };
+const varRow=v=>`<div class="vrow row" data-id="${esc(v.id||"")}"><div><label>اسم الخيار</label><input class="v-l" maxlength="60" value="${esc(v.label)}"></div><div><label>السعر (اختياري)</label><input class="v-p" type="number" inputmode="decimal" value="${esc(v.price)}"></div><div><label>سعر الخصم (اختياري)</label><input class="v-s" type="number" inputmode="decimal" value="${esc(v.sale_price)}"></div><label><input type="checkbox" class="v-i" style="width:auto" ${v.in_stock!==false?"checked":""}> متوفر</label><button class="sm red v-x" type="button">حذف</button></div>`;
+const attrRow=a=>`<div class="arow row"><div><label>الخاصية</label><input class="a-k" maxlength="60" value="${esc(a.k)}"></div><div><label>القيمة</label><input class="a-v" maxlength="200" value="${esc(a.v)}"></div><button class="sm red a-x" type="button">حذف</button></div>`;
 async function saveProduct(){
  flash("pm","جاري الحفظ...",true);
  try{
   if(gal.length>12)return flash("pm","الحد الأقصى 12 صورة");
-  const row={name:$("pn").value.trim(),description:$("pd").value,price:num($("pp").value),sale_price:$("psl").value?num($("psl").value):null,image_url:gal[0]||null,images:gal.slice(),category_id:$("pcat").value||null,active:$("pa").checked,in_stock:$("pst").checked,featured:$("pfe").checked,min_order_qty:Math.max(1,parseInt($("pmoq").value)||1)};
+  const row={name:$("pn").value.trim(),description:$("pd").value,price:num($("pp").value),sale_price:$("psl").value?num($("psl").value):null,image_url:gal[0]||null,images:gal.slice(),category_id:$("pcat").value||null,active:$("pa").checked,in_stock:$("pst").checked,featured:$("pfe").checked,min_order_qty:Math.max(1,parseInt($("pmoq").value)||1),attributes:[...document.querySelectorAll(".arow")].map(r=>({k:r.querySelector(".a-k").value.trim(),v:r.querySelector(".a-v").value.trim()})).filter(a=>a.k&&a.v)};
   if(!row.name||!row.price)return flash("pm","الاسم والسعر مطلوبين");
   const tiers=[...document.querySelectorAll(".tier")].map(r=>({min_qty:parseInt(r.querySelector(".t-q").value),unit_price:num(r.querySelector(".t-p").value),label:r.querySelector(".t-l").value.trim()||null})).filter(t=>t.min_qty>=2&&t.unit_price>0);
   if(new Set(tiers.map(t=>t.min_qty)).size!==tiers.length)return flash("pm","كمية مكررة في شرائح الأسعار");
@@ -164,6 +173,14 @@ async function saveProduct(){
   if($("pcost").value!==""){const {error}=await sb.from("product_costs").upsert({product_id:pid,cost:num($("pcost").value),updated_at:new Date().toISOString()});if(error)throw error;D.costs[pid]=num($("pcost").value)}
   const del=await sb.from("product_price_tiers").delete().eq("product_id",pid);if(del.error)throw del.error;
   if(tiers.length){const {data,error}=await sb.from("product_price_tiers").insert(tiers.map(t=>({...t,product_id:pid}))).select();if(error)throw error;D.tiers[pid]=data.sort((a,b)=>a.min_qty-b.min_qty)}else delete D.tiers[pid];
+  const vr=[...document.querySelectorAll(".vrow")].map((r,i)=>({id:r.dataset.id||null,label:r.querySelector(".v-l").value.trim(),price:r.querySelector(".v-p").value!==""?num(r.querySelector(".v-p").value):null,sale_price:r.querySelector(".v-s").value!==""?num(r.querySelector(".v-s").value):null,in_stock:r.querySelector(".v-i").checked,sort_order:i})).filter(v=>v.label);
+  if(new Set(vr.map(v=>v.label)).size!==vr.length)return flash("pm","اسم خيار مكرر");
+  const keep=vr.filter(v=>v.id).map(v=>v.id),old=(D.vars[pid]||[]).map(v=>v.id).filter(id=>!keep.includes(id));
+  if(old.length){const {error}=await sb.from("product_variants").delete().in("id",old);if(error)throw error}
+  const ups=vr.filter(v=>v.id).map(v=>({...v,product_id:pid})),ins=vr.filter(v=>!v.id).map(v=>({label:v.label,price:v.price,sale_price:v.sale_price,in_stock:v.in_stock,sort_order:v.sort_order,product_id:pid}));
+  if(ups.length){const {error}=await sb.from("product_variants").upsert(ups);if(error)throw error}
+  if(ins.length){const {error}=await sb.from("product_variants").insert(ins);if(error)throw error}
+  {const {data,error}=await sb.from("product_variants").select("*").eq("product_id",pid).order("sort_order");if(error)throw error;if(data.length)D.vars[pid]=data;else delete D.vars[pid]}
   if(editP)Object.assign(editP,r.data);else D.products.unshift(r.data);
   editP=null;gal=[];V.products();flash("pm","تم الحفظ",true);
  }catch(e){flash("pm","خطأ: "+e.message)}
