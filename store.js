@@ -133,7 +133,7 @@
     if (!ms.some(m => m.id === payId)) payId = ms[0].id;
     const m = ms.find(x => x.id === payId), v = totalNow();
     box.innerHTML = `<label>طريقة الدفع</label><div class="pays">${ms.map(x => `<label class="pay${x.id === payId ? " on" : ""}"><input type="radio" name="pm" value="${esc(x.id)}" ${x.id === payId ? "checked" : ""}><span>${esc(x.name)}</span></label>`).join("")}</div>` +
-      (m.kind === "cod" ? "" : `<div class="payinfo"><p>1) حوّل <b id="paytot">${v == null ? "إجمالي الطلب (اختر المحافظة الأول)" : fmt(v) + " جنيه"}</b> بالظبط على ${esc(m.name)}:</p><div class="paydet"><b dir="ltr">${esc(m.detail)}</b><button type="button" class="btn gray" id="paycopy">نسخ</button></div>${m.note ? `<p class="muted">${esc(m.note)}</p>` : ""}<p>2) ارفع صورة التحويل أو اكتب رقم العملية:</p><input type="file" id="payfile" accept="image/*"><input id="payref" placeholder="رقم العملية / المرجع (اختياري لو رفعت الصورة)" maxlength="60"><p class="muted">طلبك هيتسجل "بانتظار تأكيد الدفع" وهنأكده بعد مراجعة التحويل.</p></div>`);
+      (m.kind === "cod" ? "" : `<div class="payinfo"><p>1) حوّل <b id="paytot">${v == null ? "إجمالي الطلب (اختر المحافظة الأول)" : fmt(v) + " جنيه"}</b> بالظبط على ${esc(m.name)}:</p><div class="paydet"><b dir="ltr">${esc(m.detail)}</b><button type="button" class="btn gray" id="paycopy">نسخ</button></div>${m.note ? `<p class="muted">${esc(m.note)}</p>` : ""}<p>2) ارفع صورة التحويل (إجباري) وتقدر تكتب رقم العملية كمان:</p><input type="file" id="payfile" accept="image/*"><input id="payref" placeholder="رقم العملية / المرجع (اختياري)" maxlength="60"><p class="muted">طلبك هيتسجل "بانتظار تأكيد الدفع" وهنأكده بعد مراجعة التحويل.</p></div>`);
     box.querySelectorAll("[name=pm]").forEach(r => r.onchange = () => { payId = r.value; renderPay(); $("csum").innerHTML = summary($("cg").value); $("csub").textContent = btnText() });
     const c = $("paycopy"); if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(m.detail) } catch (e) { const t = document.createElement("textarea"); t.value = m.detail; document.body.appendChild(t); t.select(); try { document.execCommand("copy") } catch (x) {} t.remove() } c.textContent = "تم النسخ"; setTimeout(() => (c.textContent = "نسخ"), 1500) };
     $("csub").textContent = btnText();
@@ -157,8 +157,8 @@
     let proof = null, ref = null;
     if (payKind() !== "cod") {
       ref = ($("payref").value || "").trim(); const f = $("payfile").files[0];
-      if (!f && ref.length < 4) return fail("ارفع صورة التحويل أو اكتب رقم العملية");
-      if (f) { btn.disabled = true; btn.textContent = "جاري رفع الصورة..."; try { proof = await uploadProof(f) } catch (e) { if (ref.length < 4) return fail("تعذر رفع الصورة، جرب صورة تانية أو اكتب رقم العملية") } }
+      if (!f && !proofPath) return fail("لازم ترفع صورة التحويل (سكرين شوت) عشان نأكد الدفع");
+      if (f) { btn.disabled = true; btn.textContent = "جاري رفع الصورة..."; try { proof = await uploadProof(f) } catch (e) { btn.disabled = false; btn.textContent = btnText(); return fail("تعذر رفع الصورة، جرب صورة تانية") } } else { proof = proofPath }
     }
     btn.disabled = true; btn.textContent = "جاري إرسال الطلب...";
     let key = sessionStorage.getItem("ckey"); if (!key) { key = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", key) }
