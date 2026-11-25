@@ -75,3 +75,6 @@ button{transition:transform .12s,box-shadow .15s,background .15s,opacity .15s}bu
 .stsel{margin:12px 0;padding:12px;background:#faf8f4;border-radius:12px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:#111;color:#fff;padding:10px 20px;border-radius:30px;opacity:0;transition:.3s;z-index:999;font-size:14px}.toast.show{opacity:1;transform:translate(-50%,0)}
 .tox-tinymce{border-radius:12px!important;border-color:var(--line)!important}
+.skel{height:90px;background:linear-gradient(90deg,#eee 25%,#f7f7f7 37%,#eee 63%);background-size:400% 100%;animation:sk 1.2s ease infinite;border-radius:var(--r)}@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.tgl{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:14px}.tgl input{width:auto}
+.prow2{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #eee;font-size:14px}
