@@ -43,8 +43,9 @@ const PCOLS = "id,name,slug,description,price,sale_price,image_url,category_id,u
 
 function baseUrl(req, S) {
   const u = (S.site_url || "").trim().replace(/\/+$/, "");
-  if (/^https?:\/\//i.test(u)) return u;
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || new URL(req.url).host;
+  let uh = ""; try { uh = new URL(u).host } catch (e) {}
+  if (/^https?:\/\//i.test(u) && (uh === host || !/\.pages\.dev$/.test(host))) return u;
   const proto = req.headers.get("x-forwarded-proto") || (/^localhost|127\./.test(host) ? "http" : "https");
   return proto + "://" + host;
 }
