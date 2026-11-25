@@ -410,9 +410,9 @@ V.reports=()=>{
 };
 
 /* ---------- store look (everything on the home page) ---------- */
-const SECS={intro:"شريط التعريف بالمتجر",reviews:"آراء العملاء",catsecs:"أقسام المنتجات (التي تختارها)",trust:"شريط المميزات (الدفع عند الاستلام...)",categories:"الأقسام",featured:"المنتجات المميزة",latest:"أحدث المنتجات",about:"نبذة عن المتجر"};
+const SECS={intro:"شريط التعريف بالمتجر",reviews:"آراء العملاء",chats:"محادثات العملاء (واتساب)",catsecs:"أقسام المنتجات (التي تختارها)",trust:"شريط المميزات (الدفع عند الاستلام...)",categories:"الأقسام",featured:"المنتجات المميزة",latest:"أحدث المنتجات",about:"نبذة عن المتجر"};
 let layout=null;
-const getLayout=()=>{if(layout)return layout;let j=[];try{j=JSON.parse(setting("home_layout"))}catch(e){}const keys=Object.keys(SECS);j=(Array.isArray(j)?j:[]).filter(x=>SECS[x.k]);const NEWK=["intro","reviews","catsecs"],front=[];keys.forEach(k=>{if(!j.some(x=>x.k===k))(NEWK.includes(k)?front:j).push({k,on:true})});j=[...front,...j];return layout=j};
+const getLayout=()=>{if(layout)return layout;let j=[];try{j=JSON.parse(setting("home_layout"))}catch(e){}const keys=Object.keys(SECS);j=(Array.isArray(j)?j:[]).filter(x=>SECS[x.k]);if(!j.some(x=>x.k==="chats")){const ai=j.findIndex(x=>x.k==="about");j.splice(ai>=0?ai:j.length,0,{k:"chats",on:true})}const NEWK=["intro","reviews","catsecs"],front=[];keys.forEach(k=>{if(!j.some(x=>x.k===k))(NEWK.includes(k)?front:j).push({k,on:true})});j=[...front,...j];return layout=j};
 let lookSub=null;
 const INTRO_DEF="متخصصون في توفير جميع أدوات ورفايع المطبخ العصرية بأسعار الجملة الحقيقية من أول قطعة، نجمع لك بين الجودة والخامات والتوفير العالي بدون حد أدنى للشراء.";
 const LK=[["logo","🏷️","اللوجو","رفع اللوجو، حجمه، أيقونة المتجر"],["colors","🎨","الألوان","ألوان المتجر والأزرار والخلفية"],["fonts","🔤","الخطوط","اختر خطاً عربياً مع معاينة"],["ticker","📢","شريط الإعلانات","الشريط المتحرك أعلى الموقع"],["hero","🖼️","سلايدر البانر","صور متعددة وأزرار بنصك"],["product","🛍️","عرض المنتجات والقائمة","شكل الكروت وقائمة الأقسام"],["home","🏠","أقسام الصفحة الرئيسية","التعريف، آراء العملاء، أقسام المنتجات، المميزات"],["footer","📄","الفوتر","نص أسفل الموقع"],["contact","📞","بيانات التواصل","واتساب، هاتف، إيميل، عنوان"],["social","🔗","شبكات التواصل","فيسبوك، إنستجرام، تيك توك..."]];
@@ -420,7 +420,7 @@ const jparse=(k)=>{try{const a=JSON.parse(D.settings[k]||"[]");return Array.isAr
 const mvArr=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return false;[a[i],a[j]]=[a[j],a[i]];return true};
 const wire=(root,sel,fn)=>root.querySelectorAll(sel).forEach(fn);
 let lkTab="order",lkTabs="";
-const homeTabs=cur=>{lkTab=cur;lkTabs=`<div class="sub">${[["order","الترتيب"],["intro","شريط التعريف"],["reviews","آراء العملاء"],["cats","أقسام المنتجات"],["trust","المميزات"]].map(t=>`<button type="button" data-ht="${t[0]}" class="${t[0]===cur?"on":""}">${t[1]}</button>`).join("")}</div>`};
+const homeTabs=cur=>{lkTab=cur;lkTabs=`<div class="sub">${[["order","الترتيب"],["intro","شريط التعريف"],["reviews","آراء العملاء"],["chats","محادثات واتساب"],["cats","أقسام المنتجات"],["trust","المميزات"]].map(t=>`<button type="button" data-ht="${t[0]}" class="${t[0]===cur?"on":""}">${t[1]}</button>`).join("")}</div>`};
 function lkPage(title,inner,init,extra,save){
  $("view").innerHTML=`<div id="lk"><p><button class="sm gray" id="lkback" type="button">← رجوع لمظهر المتجر</button></p><h2 style="margin:6px 0 12px">${title}</h2>${lkTabs}${inner}<button id="lsave">${save||"حفظ"}</button> <span id="lm"></span></div>`;
  lkTabs="";wire($("lk"),"[data-ht]",b=>b.onclick=()=>{lkTab=b.dataset.ht;V.look()});
@@ -493,7 +493,22 @@ const LKP={
    q("[data-ri]",e=>e.onchange=async()=>{const f=e.files[0];if(!f)return;flash("lm","جاري رفع الصورة...",true);try{const sm=await shrink(f);RV[+e.dataset.ri].img=await upload(sm,"reviews");draw();flash("lm","تم رفع الصورة. اضغط حفظ.",true)}catch(x){flash("lm","فشل رفع الصورة")}})};
    $("rvadd").onclick=()=>{RV.push({img:"",name:"",text:""});draw()};draw()},
   {check:()=>{const i=RV.findIndex(r=>!r.img&&!r.text.trim());if(i>=0)return "الرأي "+(i+1)+" فارغ. أضف صورة أو نصاً أو احذفه."},rows:()=>[{key:"reviews",value:JSON.stringify(RV.map(r=>({img:r.img,name:r.name.trim(),text:r.text.trim()})))}]})},
- home(){({order:LKP.h_order,trust:LKP.h_trust,intro:LKP.intro,reviews:LKP.reviews,cats:LKP.h_cats}[lkTab]||LKP.h_order)()},
+ chats(){
+  homeTabs("chats");const CH=jparse("chats").map(c=>({msgs:(Array.isArray(c.msgs)?c.msgs:[]).map(m=>({d:m.d==="out"?"out":"in",t:m.t||"",tm:m.tm||""}))}));
+  lkPage("محادثات العملاء (واتساب)",`<div class="box"><p class="hint">كل محادثة بتظهر كشاشة شات واتساب بشارة "عميل موثّق". كل رسالة إما من العميل (أبيض) أو من المتجر (أخضر). القسم بيظهر في الرئيسية بين الأقسام، وتقدر تخفيه أو تغيّر مكانه من تبويب "الترتيب". اكتب نصوص حقيقية بس.</p>
+   <label>عنوان القسم</label><input data-k="chats_title" value="${esc(D.settings.chats_title===undefined?"من محادثات عملاء مطبخي بالجملة":D.settings.chats_title)}" maxlength="100"><label>سطر تحت العنوان</label><input data-k="chats_sub" value="${esc(D.settings.chats_sub===undefined?"آراء وانطباعات حقيقية لعملاء بعد استلام أوردراتهم (اسحب لرؤية المزيد)":D.settings.chats_sub)}" maxlength="160">
+   <label><input type="checkbox" id="chon" ${D.settings.chats_on==="0"?"":"checked"}> إظهار القسم في الصفحة الرئيسية</label><div id="chl"></div><button class="sm gray" id="chadd" type="button">+ محادثة جديدة</button></div>`,
+  ()=>{const draw=()=>{$("chl").innerHTML=CH.map((c,i)=>`<div class="lay" style="display:block"><div class="row" style="align-items:center"><b>محادثة ${i+1}</b><button class="sm gray" data-cu="${i}" type="button">▲</button><button class="sm gray" data-cd="${i}" type="button">▼</button><button class="sm red" data-cx="${i}" type="button">حذف المحادثة</button></div>
+    ${c.msgs.map((m,j)=>`<div class="row" style="align-items:flex-start;margin-top:6px"><select data-md="${i}.${j}"><option value="in" ${m.d==="in"?"selected":""}>العميل</option><option value="out" ${m.d==="out"?"selected":""}>المتجر</option></select><textarea data-mt="${i}.${j}" rows="2" maxlength="600" style="flex:1">${esc(m.t)}</textarea><input data-mm="${i}.${j}" value="${esc(m.tm)}" placeholder="الوقت مثال ١٠:٤٦ ص" maxlength="12" style="max-width:120px"><button class="sm red" data-mx="${i}.${j}" type="button">x</button></div>`).join("")}
+    <button class="sm gray" data-ma="${i}" type="button">+ رسالة</button></div>`).join("")||'<p class="hint">لا توجد محادثات.</p>';
+   const q=(s,f)=>wire($("chl"),s,f),ix=e=>e.split(".").map(Number);
+   q("[data-cu]",b=>b.onclick=()=>{if(mvArr(CH,+b.dataset.cu,-1))draw()});q("[data-cd]",b=>b.onclick=()=>{if(mvArr(CH,+b.dataset.cd,1))draw()});q("[data-cx]",b=>b.onclick=()=>{if(confirm("حذف المحادثة؟")){CH.splice(+b.dataset.cx,1);draw()}});
+   q("[data-ma]",b=>b.onclick=()=>{const m=CH[+b.dataset.ma].msgs;m.push({d:m.length&&m[m.length-1].d==="in"?"out":"in",t:"",tm:""});draw()});
+   q("[data-mx]",b=>b.onclick=()=>{const[i,j]=ix(b.dataset.mx);CH[i].msgs.splice(j,1);draw()});
+   q("[data-md]",e=>e.onchange=()=>{const[i,j]=ix(e.dataset.md);CH[i].msgs[j].d=e.value});q("[data-mt]",e=>e.oninput=()=>{const[i,j]=ix(e.dataset.mt);CH[i].msgs[j].t=e.value});q("[data-mm]",e=>e.oninput=()=>{const[i,j]=ix(e.dataset.mm);CH[i].msgs[j].tm=e.value})};
+   $("chadd").onclick=()=>{CH.push({msgs:[{d:"in",t:"",tm:""},{d:"out",t:"",tm:""}]});draw()};draw()},
+  {check:()=>{const i=CH.findIndex(c=>!c.msgs.some(m=>m.t.trim()));if(i>=0)return "المحادثة "+(i+1)+" مفيهاش رسايل. اكتب رسالة أو احذفها."},rows:()=>[{key:"chats",value:JSON.stringify(CH.map(c=>({msgs:c.msgs.filter(m=>m.t.trim()).map(m=>({d:m.d,t:m.t.trim(),tm:m.tm.trim()}))})))},{key:"chats_on",value:$("chon").checked?"1":"0"}]})},
+ home(){({order:LKP.h_order,trust:LKP.h_trust,intro:LKP.intro,reviews:LKP.reviews,chats:LKP.chats,cats:LKP.h_cats}[lkTab]||LKP.h_order)()},
  h_order(){
   homeTabs("order");layout=null;const Ly=getLayout();
   lkPage("ترتيب أقسام الصفحة الرئيسية",`<div class="box"><p class="hint">أظهر/أخفِ ورتّب. ترتيب الصفحة من أعلى: الشريط المتحرك، الهيدر، البانر، ثم هذه الأقسام بالترتيب الذي تختاره.</p><div id="lay"></div></div>`,

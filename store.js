@@ -287,6 +287,7 @@ document.addEventListener("click", e => {
   m.src = b.dataset.src; document.querySelectorAll("#thumbs button").forEach(x => x.classList.toggle("on", x === b));
 });
 
+document.querySelectorAll(".wch-w").forEach(w => { const c = w.querySelector(".wch-c"); w.querySelectorAll(".wch-b").forEach(b => b.onclick = () => c.scrollBy({ left: (b.dataset.d === "l" ? -1 : 1) * c.clientWidth, behavior: "smooth" })) });
 // hero slider: fade, auto-advance, pause on touch/hover/hidden tab, swipe, dots
 (function () {
   document.querySelectorAll("[data-hs]").forEach(root => {
