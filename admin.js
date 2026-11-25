@@ -110,10 +110,11 @@ function drawGal(){const g=$("gal");if(!g)return;g.innerHTML=gal.map((u,i)=>`<di
  g.querySelectorAll("[data-gx]").forEach(b=>b.onclick=()=>{gal.splice(+b.dataset.gx,1);drawGal()})}
 const tierRow=t=>`<div class="tier"><div><label>من كمية</label><input class="t-q" type="number" inputmode="numeric" min="2" value="${esc(t.min_qty??"")}"></div><div><label>سعر القطعة</label><input class="t-p" type="number" inputmode="decimal" value="${esc(t.unit_price??"")}"></div><div><label>اسم (اختياري: جملة، كرتونة)</label><input class="t-l" value="${esc(t.label)}"></div><button class="sm red t-x" type="button">x</button></div>`;
 V.products=()=>{
+ if(typeof impMode!=="undefined"&&impMode)return V.import();
  const q=($("ps")||{}).value||"",fc=($("pc")||{}).value||"";
  const list=D.products.filter(p=>(!q||(p.name||"").includes(q))&&(!fc||(fc==="none"?!p.category_id:p.category_id===fc)));
  const p=editP||{};const ts=editP?(D.tiers[String(p.id)]||[]):[];
- $("view").innerHTML=`<div class="box" id="pform"><h3>${editP?"تعديل منتج":"منتج جديد"}</h3>
+ $("view").innerHTML=`<div class="box" id="pform"><button class="sm gray" id="impopen" style="float:left">استيراد من Excel / CSV</button><h3>${editP?"تعديل منتج":"منتج جديد"}</h3>
  <label>الاسم</label><input id="pn" value="${esc(p.name)}"><label>الوصف (نص عادي أو HTML للتنسيق، الأكواد الخطيرة تُحذف تلقائياً)</label>
  <div class="rtb">${RT.map((t,i)=>`<button type="button" class="sm gray" data-rt="${i}">${t[0]}</button>`).join("")}</div><textarea id="pd" rows="7" dir="auto">${esc(p.description)}</textarea>
  <details class="rprev"><summary>معاينة الوصف كما سيظهر</summary><div id="pdprev" class="desc rich"></div></details>
@@ -133,7 +134,7 @@ V.products=()=>{
  if($("pmore"))$("pmore").onclick=()=>{lim+=100;V.products()};
  const wireT=()=>document.querySelectorAll(".t-x").forEach(b=>b.onclick=()=>b.closest(".tier").remove());wireT();
  $("tadd").onclick=()=>{$("tiers").insertAdjacentHTML("beforeend",tierRow({}));wireT()};
- drawGal();
+ drawGal();$("impopen").onclick=()=>{impMode=true;V.import()};
  $("pfs").onchange=async()=>{const fs=[...$("pfs").files];for(const f of fs){if(gal.length>=12){flash("gm","الحد الأقصى 12 صورة");break}try{flash("gm","جاري رفع "+f.name+"...",true);gal.push(await upload(await shrink(f)));drawGal()}catch(e){flash("gm","خطأ في الرفع: "+e.message);return}}flash("gm","تم الرفع",true);$("pfs").value=""};
  const prev=()=>{$("pdprev").innerHTML=window.sanitizeHtml($("pd").value)};$("pd").oninput=prev;prev();
  document.querySelectorAll("[data-rt]").forEach(b=>b.onclick=()=>{const t=RT[+b.dataset.rt],ta=$("pd"),a=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(a,e);ta.value=ta.value.slice(0,a)+t[1]+sel+t[2]+ta.value.slice(e);ta.focus();prev()});
