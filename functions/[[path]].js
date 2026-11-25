@@ -8,6 +8,7 @@ import llms from "../netlify/functions/llms.mjs";
 
 export const onRequest = async (c) => {
   const p = new URL(c.request.url).pathname.replace(/\/+$/, "") || "/";
+  if (p === "/google9e1317c29e841629.html") return new Response("google-site-verification: google9e1317c29e841629.html", { headers: { "content-type": "text/html; charset=utf-8" } });
   let h = null;
   if (p === "/") h = home;
   else if (p === "/products" || p.startsWith("/c/")) h = category;
