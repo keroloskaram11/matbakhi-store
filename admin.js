@@ -410,7 +410,7 @@ V.reports=()=>{
 };
 
 /* ---------- store look (everything on the home page) ---------- */
-const SECS={intro:"شريط التعريف بالمتجر",reviews:"آراء العملاء",chats:"محادثات العملاء (واتساب)",catsecs:"أقسام المنتجات (التي تختارها)",trust:"شريط المميزات (الدفع عند الاستلام...)",categories:"الأقسام",featured:"المنتجات المميزة",latest:"أحدث المنتجات",about:"نبذة عن المتجر"};
+const SECS={intro:"شريط التعريف بالمتجر",reviews:"آراء العملاء",chats:"محادثات العملاء (واتساب)",catsecs:"أقسام المنتجات (التي تختارها)",trust:"شريط المميزات (الدفع عند الاستلام...)",categories:"شبكة الأقسام (بالصور)",featured:"المنتجات المميزة",latest:"أحدث المنتجات",about:"نبذة عن المتجر"};
 let layout=null;
 const getLayout=()=>{if(layout)return layout;let j=[];try{j=JSON.parse(setting("home_layout"))}catch(e){}const keys=Object.keys(SECS);j=(Array.isArray(j)?j:[]).filter(x=>SECS[x.k]);if(!j.some(x=>x.k==="chats")){const ai=j.findIndex(x=>x.k==="about");j.splice(ai>=0?ai:j.length,0,{k:"chats",on:true})}const NEWK=["intro","reviews","catsecs"],front=[];keys.forEach(k=>{if(!j.some(x=>x.k===k))(NEWK.includes(k)?front:j).push({k,on:true})});j=[...front,...j];return layout=j};
 let lookSub=null;
@@ -420,7 +420,7 @@ const jparse=(k)=>{try{const a=JSON.parse(D.settings[k]||"[]");return Array.isAr
 const mvArr=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return false;[a[i],a[j]]=[a[j],a[i]];return true};
 const wire=(root,sel,fn)=>root.querySelectorAll(sel).forEach(fn);
 let lkTab="order",lkTabs="";
-const homeTabs=cur=>{lkTab=cur;lkTabs=`<div class="sub">${[["order","الترتيب"],["intro","شريط التعريف"],["reviews","آراء العملاء"],["chats","محادثات واتساب"],["cats","أقسام المنتجات"],["trust","المميزات"]].map(t=>`<button type="button" data-ht="${t[0]}" class="${t[0]===cur?"on":""}">${t[1]}</button>`).join("")}</div>`};
+const homeTabs=cur=>{lkTab=cur;lkTabs=`<div class="sub">${[["order","الترتيب"],["intro","شريط التعريف"],["reviews","آراء العملاء"],["chats","محادثات واتساب"],["cgrid","شبكة الأقسام"],["cats","أقسام المنتجات"],["trust","المميزات"]].map(t=>`<button type="button" data-ht="${t[0]}" class="${t[0]===cur?"on":""}">${t[1]}</button>`).join("")}</div>`};
 function lkPage(title,inner,init,extra,save){
  $("view").innerHTML=`<div id="lk"><p><button class="sm gray" id="lkback" type="button">← رجوع لمظهر المتجر</button></p><h2 style="margin:6px 0 12px">${title}</h2>${lkTabs}${inner}<button id="lsave">${save||"حفظ"}</button> <span id="lm"></span></div>`;
  lkTabs="";wire($("lk"),"[data-ht]",b=>b.onclick=()=>{lkTab=b.dataset.ht;V.look()});
@@ -508,7 +508,7 @@ const LKP={
    q("[data-md]",e=>e.onchange=()=>{const[i,j]=ix(e.dataset.md);CH[i].msgs[j].d=e.value});q("[data-mt]",e=>e.oninput=()=>{const[i,j]=ix(e.dataset.mt);CH[i].msgs[j].t=e.value});q("[data-mm]",e=>e.oninput=()=>{const[i,j]=ix(e.dataset.mm);CH[i].msgs[j].tm=e.value})};
    $("chadd").onclick=()=>{CH.push({msgs:[{d:"in",t:"",tm:""},{d:"out",t:"",tm:""}]});draw()};draw()},
   {check:()=>{const i=CH.findIndex(c=>!c.msgs.some(m=>m.t.trim()));if(i>=0)return "المحادثة "+(i+1)+" مفيهاش رسايل. اكتب رسالة أو احذفها."},rows:()=>[{key:"chats",value:JSON.stringify(CH.map(c=>({msgs:c.msgs.filter(m=>m.t.trim()).map(m=>({d:m.d,t:m.t.trim(),tm:m.tm.trim()}))})))},{key:"chats_on",value:$("chon").checked?"1":"0"}]})},
- home(){({order:LKP.h_order,trust:LKP.h_trust,intro:LKP.intro,reviews:LKP.reviews,chats:LKP.chats,cats:LKP.h_cats}[lkTab]||LKP.h_order)()},
+ home(){({order:LKP.h_order,trust:LKP.h_trust,intro:LKP.intro,reviews:LKP.reviews,chats:LKP.chats,cats:LKP.h_cats,cgrid:LKP.h_cgrid}[lkTab]||LKP.h_order)()},
  h_order(){
   homeTabs("order");layout=null;const Ly=getLayout();
   lkPage("ترتيب أقسام الصفحة الرئيسية",`<div class="box"><p class="hint">أظهر/أخفِ ورتّب. ترتيب الصفحة من أعلى: الشريط المتحرك، الهيدر، البانر، ثم هذه الأقسام بالترتيب الذي تختاره.</p><div id="lay"></div></div>`,
@@ -525,6 +525,18 @@ const LKP={
     wire($("csl"),"[data-co]",c=>c.onchange=()=>{CS[+c.dataset.co].on=c.checked});wire($("csl"),"[data-cn]",c=>c.onchange=()=>{CS[+c.dataset.cn].n=+c.value});
     wire($("csl"),"[data-cu]",b=>b.onclick=()=>{if(mvArr(CS,+b.dataset.cu,-1))d2()});wire($("csl"),"[data-cd]",b=>b.onclick=()=>{if(mvArr(CS,+b.dataset.cd,1))d2()})};d2()},
   {rows:()=>[{key:"home_cat_sections",value:JSON.stringify(CS.filter(x=>x.on).map(x=>({slug:x.slug,n:x.n})))}]})},
+ h_cgrid(){
+  homeTabs("cgrid");
+  let G={cols:2,items:[]};try{const j=JSON.parse(D.settings.home_cat_grid||"null");if(j&&Array.isArray(j.items)){G.cols=[1,2,3].includes(+j.cols)?+j.cols:2;G.items=j.items.filter(x=>x&&D.cats.some(c=>c.slug===x.slug)).map(x=>({slug:x.slug,on:x.on!==false,t:x.t||""}))}}catch(e){}
+  const seeded=G.items.length>0;
+  D.cats.filter(c=>c.slug&&!G.items.some(x=>x.slug===c.slug)).forEach(c=>G.items.push({slug:c.slug,on:!seeded&&c.show_home!==false,t:""}));
+  lkPage("شبكة الأقسام (بالصور)",`<div class="box"><p class="hint">دي الشبكة اللي بتظهر في الصفحة الرئيسية. رتّب الأقسام بالأسهم (فوق/تحت)، اختار كام قسم في الصف، واكتب سطر تعريف قصير تحت كل قسم (اختياري). القسم المقفول مش بيظهر.</p><label>كام قسم في الصف؟</label><select id="gcols" style="width:auto"><option value="1">قسم واحد في الصف</option><option value="2">قسمين في الصف</option><option value="3">3 أقسام في الصف</option></select><div id="gl"></div><p class="hint">الأقسام الجديدة تتضاف من شاشة "الأقسام". أماكن القسم في الشبكة: الصف الأول هو أول عنصرين مثلاً لو اخترت قسمين في الصف.</p></div>`,
+  ()=>{$("gcols").value=String(G.cols);$("gcols").onchange=()=>{G.cols=+$("gcols").value};
+   const nm=s=>(D.cats.find(c=>c.slug===s)||{}).name||s;
+   const d=()=>{$("gl").innerHTML=G.items.map((x,i)=>`<div class="lay" style="flex-wrap:wrap"><input type="checkbox" data-go="${i}" ${x.on?"checked":""}><b>${esc(nm(x.slug))}</b><button class="sm gray" data-gu="${i}" type="button">▲</button><button class="sm gray" data-gd="${i}" type="button">▼</button><input data-gt="${i}" value="${esc(x.t)}" maxlength="120" placeholder="سطر تعريف قصير (اختياري)" style="flex-basis:100%;margin:4px 0 0"></div>`).join("");
+    wire($("gl"),"[data-go]",c=>c.onchange=()=>{G.items[+c.dataset.go].on=c.checked});wire($("gl"),"[data-gt]",c=>c.oninput=()=>{G.items[+c.dataset.gt].t=c.value});
+    wire($("gl"),"[data-gu]",b=>b.onclick=()=>{if(mvArr(G.items,+b.dataset.gu,-1))d()});wire($("gl"),"[data-gd]",b=>b.onclick=()=>{if(mvArr(G.items,+b.dataset.gd,1))d()})};d()},
+  {rows:()=>[{key:"home_cat_grid",value:JSON.stringify({cols:G.cols,items:G.items.map(x=>({slug:x.slug,on:x.on,t:x.t.trim()}))})}]})},
  h_trust(){
   homeTabs("trust");
   lkPage("شريط المميزات",`<div class="box"><p class="hint">مربعات صغيرة في الصفحة الرئيسية. اترك العنوان فارغاً لإخفاء المربع. اكتب فقط ما هو صحيح فعلاً في متجرك.</p>${[1,2,3,4].map(n=>`<div class="row"><div>${F([["trust"+n+"_t","عنوان "+n]])}</div><div>${F([["trust"+n+"_d","وصف "+n]])}</div></div>`).join("")}</div>`)},
