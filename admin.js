@@ -1,6 +1,10 @@
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=i=>document.getElementById(i);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const dmy=iso=>/^\d{4}-\d\d-\d\d/.test(iso||"")?iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4):"";
+const pdmy=t=>{const m=/^(\d{1,2})\D(\d{1,2})\D(\d{4})$/.exec(String(t||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).trim());return m?m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"):""};
+const dIn=(id,v)=>`<input id="${id}" type="text" inputmode="numeric" dir="ltr" placeholder="DD/MM/YYYY" maxlength="10" autocomplete="off" value="${esc(v)}">`;
+const imgOf=i=>{const p=D.products.find(x=>String(x.id)===String(i.product_id));const u=p&&p.image_url;return /^https?:\/\//.test(u||"")?u:""};
 const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
@@ -210,7 +214,7 @@ V.orders=()=>{
  document.querySelectorAll(".sub [data-s]").forEach(b=>b.onclick=()=>{otab=b.dataset.s;V.orders()});(otab==="orders"?ordersView:whView)();
 };
 function filteredOrders(){const fs=($("of")||{}).value||"",q=($("oq")||{}).value||"",d1=($("od1")||{}).value||"",d2=($("od2")||{}).value||"",fg=($("og")||{}).value||"";
- return D.orders.filter(o=>(!fs||o.status_id===fs)&&(!fg||o.governorate===fg)&&(!d1||o.order_date>=d1)&&(!d2||o.order_date<=d2)&&(!q||[o.customer_name,o.phone,o.address,String(o.order_no)].some(v=>(v||"").includes(q))))}
+ return D.orders.filter(o=>(!fs||o.status_id===fs)&&(!fg||o.governorate===fg)&&(!pdmy(d1)||o.order_date>=pdmy(d1))&&(!pdmy(d2)||o.order_date<=pdmy(d2))&&(!q||[o.customer_name,o.phone,o.address,String(o.order_no)].some(v=>(v||"").includes(q))))}
 function ordersView(){
  const fs=($("of")||{}).value||"",q=($("oq")||{}).value||"",d1=($("od1")||{}).value||"",d2=($("od2")||{}).value||"",fg=($("og")||{}).value||"";
  const list=filteredOrders();const o=editO||{};const govs=D.zones.map(z=>z.governorate);
@@ -218,29 +222,30 @@ function ordersView(){
  <button id="onew">+ طلب جديد</button>
  <div class="box" id="oform" style="display:${showForm?"block":"none"};margin-top:12px"><h3>${editO?"تعديل طلب رقم "+o.order_no:"طلب جديد"}</h3>
   <div class="row"><div><label>اسم العميل</label><input id="oc" value="${esc(o.customer_name)}"></div><div><label>الموبايل</label><input id="oph" type="tel" value="${esc(o.phone)}"></div></div>
-  <div class="row"><div><label>المحافظة</label><select id="ogv"><option value="">-</option>${govs.map(g=>`<option ${g===o.governorate?"selected":""}>${esc(g)}</option>`).join("")}</select></div><div><label>الحالة</label><select id="os">${D.statuses.map(s=>`<option value="${esc(s.id)}" ${(o.status_id||newStatusId())===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div><div><label>تاريخ الطلب</label><input id="odt" type="date" value="${esc(o.order_date||today())}"></div></div>
+  <div class="row"><div><label>المحافظة</label><select id="ogv"><option value="">-</option>${govs.map(g=>`<option ${g===o.governorate?"selected":""}>${esc(g)}</option>`).join("")}</select></div><div><label>الحالة</label><select id="os">${D.statuses.map(s=>`<option value="${esc(s.id)}" ${(o.status_id||newStatusId())===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div><div><label>تاريخ الطلب</label>${dIn("odt",dmy(o.order_date||today()))}</div></div>
   <label>العنوان</label><textarea id="oa">${esc(o.address)}</textarea>
   <h4>المنتجات</h4><div id="items">${(o.order_items&&o.order_items.length?o.order_items:[{}]).map(itemRow).join("")}</div><button class="sm gray" id="oadd" type="button">+ إضافة منتج</button>
   <div class="row" style="margin-top:10px"><div><label>الإجمالي المطلوب من العميل (شامل الشحن)</label><input id="ot" type="number" inputmode="decimal" value="${esc(o.total??0)}"></div><div><label>تكلفة الشحن علينا</label><input id="osh" type="number" inputmode="decimal" value="${esc(o.shipping_cost??setting("courier_cost",0))}"></div></div>
   <label>ملاحظات العميل</label><input id="on" value="${esc(o.notes)}"><label>ملاحظاتي على الطلب (داخلية)</label><textarea id="oan" rows="2">${esc(o.admin_notes)}</textarea>
   <button id="osave">حفظ الطلب</button> <button class="gray" id="ocancel">إلغاء</button> <span id="om"></span></div>
- <div class="box"><div class="row"><select id="of"><option value="">كل الحالات</option>${D.statuses.map(s=>`<option value="${esc(s.id)}" ${fs===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select><select id="og"><option value="">كل المحافظات</option>${govs.map(g=>`<option ${fg===g?"selected":""}>${esc(g)}</option>`).join("")}</select><input id="oq" placeholder="بحث: اسم / موبايل / رقم الطلب" value="${esc(q)}"><div><label>من</label><input id="od1" type="date" value="${esc(d1)}"></div><div><label>إلى</label><input id="od2" type="date" value="${esc(d2)}"></div></div>
+ <div class="box"><div class="row"><select id="of"><option value="">كل الحالات</option>${D.statuses.map(s=>`<option value="${esc(s.id)}" ${fs===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select><select id="og"><option value="">كل المحافظات</option>${govs.map(g=>`<option ${fg===g?"selected":""}>${esc(g)}</option>`).join("")}</select><input id="oq" placeholder="بحث: اسم / موبايل / رقم الطلب" value="${esc(q)}"><div><label>من</label>${dIn("od1",d1)}</div><div><label>إلى</label>${dIn("od2",d2)}</div></div>
  <p>عدد الطلبات: ${list.length} <button class="sm gray" id="ocsv">تصدير Excel/CSV</button></p>
- ${list.slice(0,100).map(x=>{const s=stOf(x.status_id)||{},pf=orderProfit(x);return `<div class="ord"><div class="h"><b>#${x.order_no} ${esc(x.customer_name)}</b>${x.source==="web"?` <span class="pill" style="background:#0891b2">من الموقع</span>`:""}<span>${esc(x.order_date)}</span></div>
-  <div>${esc(x.phone)} ${x.phone?`<a href="https://wa.me/${esc(String(x.phone).replace(/\D/g,"").replace(/^0/,"20"))}" target="_blank" rel="noopener">واتساب</a>`:""}</div><div>${esc(x.governorate?x.governorate+" - ":"")}${esc(x.address)}</div>
-  <div>${(x.order_items||[]).map(i=>esc(i.product_name)+" × "+i.qty).join("، ")}</div>${x.notes?`<div class="hint">ملاحظة العميل: ${esc(x.notes)}</div>`:""}${x.admin_notes?`<div class="hint">ملاحظتي: ${esc(x.admin_notes)}</div>`:""}
-  <div>المنتجات: ${fmt((x.order_items||[]).reduce((a,i)=>a+Number(i.qty)*Number(i.unit_price),0))} + الشحن على العميل: ${fmt(Math.max(0,Number(x.total)-(x.order_items||[]).reduce((a,i)=>a+Number(i.qty)*Number(i.unit_price),0)))}</div>
-  <div>الإجمالي: <b>${fmt(x.total)}</b> | الربح: <b class="${pf>=0?"pos":"neg"}">${fmt(pf)}</b></div>
-  <div class="row" style="margin-top:6px;align-items:center"><select class="st" data-id="${esc(x.id)}" style="border-color:${esc(s.color)}">${D.statuses.map(t=>`<option value="${esc(t.id)}" ${t.id===x.status_id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
-  <button class="sm" data-e="${esc(x.id)}">تعديل</button><button class="sm red" data-d="${esc(x.id)}">حذف</button></div></div>`}).join("")||"<p>لا توجد طلبات</p>"}
+ ${list.slice(0,100).map(x=>{const s=stOf(x.status_id)||{},its=x.order_items||[],sub=its.reduce((a,i)=>a+Number(i.qty)*Number(i.unit_price),0),ship=Math.max(0,Number(x.total)-sub);return `<div class="oc"><div class="oh"><div><b class="on0">#${x.order_no}</b> <b>${esc(x.customer_name)}</b>${x.source==="web"?` <span class="pill" style="background:#0891b2">من الموقع</span>`:""}</div><span class="odate" dir="ltr">${esc(dmy(x.order_date))}</span></div>
+  <div class="ocu"><div>${esc(x.phone)} ${x.phone?`<a href="https://wa.me/${esc(String(x.phone).replace(/\D/g,"").replace(/^0/,"20"))}" target="_blank" rel="noopener">واتساب</a>`:""}</div><div>${esc(x.governorate?x.governorate+" - ":"")}${esc(x.address)}</div></div>
+  <div class="oi">${its.map(i=>`<div class="ol">${imgOf(i)?`<img src="${esc(imgOf(i))}" alt="" loading="lazy">`:`<span class="noimg"></span>`}<div class="oln">${esc(i.product_name)}</div><div class="olq" dir="ltr">${i.qty} × ${fmt(i.unit_price)}</div><div class="olt">${fmt(Number(i.qty)*Number(i.unit_price))}</div></div>`).join("")}</div>
+  ${x.notes?`<div class="hint">ملاحظة العميل: ${esc(x.notes)}</div>`:""}${x.admin_notes?`<div class="hint">ملاحظتي: ${esc(x.admin_notes)}</div>`:""}
+  <div class="osum"><div><span>ثمن المنتجات</span><b>${fmt(sub)} جنيه</b></div><div><span>الشحن على العميل</span><b>${fmt(ship)} جنيه</b></div><div class="tt"><span>الإجمالي</span><b>${fmt(x.total)} جنيه</b></div></div>
+  <div class="oact"><select class="st" data-id="${esc(x.id)}" style="border-color:${esc(s.color)}">${D.statuses.map(t=>`<option value="${esc(t.id)}" ${t.id===x.status_id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
+  <button class="sm" data-inv="${esc(x.id)}">تحميل الفاتورة PDF</button><button class="sm gray" data-e="${esc(x.id)}">تعديل</button><button class="sm red" data-d="${esc(x.id)}">حذف</button></div></div>`}).join("")||"<p>لا توجد طلبات</p>"}
  ${list.length>100?`<p>يظهر أحدث 100 طلب. استخدم الفلاتر أو التصدير.</p>`:""}</div>`;
  wireItems();totalManual=!!editO;$("ot").oninput=()=>{totalManual=true};
  $("onew").onclick=()=>{editO=null;showForm=true;ordersView();scrollTo(0,0)};
  $("oadd").onclick=()=>{$("items").insertAdjacentHTML("beforeend",itemRow());wireItems()};
  $("ocancel").onclick=()=>{editO=null;showForm=false;ordersView()};$("osave").onclick=saveOrder;
  ["of","og","od1","od2"].forEach(i=>$(i).onchange=ordersView);$("oq").oninput=()=>{const pos=$("oq").selectionStart;ordersView();$("oq").focus();$("oq").setSelectionRange(pos,pos)};
- $("ocsv").onclick=()=>csv("orders-"+today()+".csv",[["رقم","التاريخ","العميل","الموبايل","المحافظة","العنوان","المنتجات","الإجمالي","تكلفة المنتجات","الشحن علينا","الربح","الحالة","المصدر","ملاحظات"],...filteredOrders().map(x=>[x.order_no,x.order_date,x.customer_name,x.phone,x.governorate,x.address,(x.order_items||[]).map(i=>i.product_name+" × "+i.qty).join(" | "),x.total,itemsCost(x),x.shipping_cost,orderProfit(x),(stOf(x.status_id)||{}).name,x.source,[x.notes,x.admin_notes].filter(Boolean).join(" / ")])]);
+ $("ocsv").onclick=()=>csv("orders-"+today()+".csv",[["رقم","التاريخ","العميل","الموبايل","المحافظة","العنوان","المنتجات","الإجمالي","تكلفة المنتجات","الشحن علينا","الربح","الحالة","المصدر","ملاحظات"],...filteredOrders().map(x=>[x.order_no,dmy(x.order_date),x.customer_name,x.phone,x.governorate,x.address,(x.order_items||[]).map(i=>i.product_name+" × "+i.qty).join(" | "),x.total,itemsCost(x),x.shipping_cost,orderProfit(x),(stOf(x.status_id)||{}).name,x.source,[x.notes,x.admin_notes].filter(Boolean).join(" / ")])]);
  document.querySelectorAll(".st").forEach(s=>s.onchange=async()=>{const {error}=await sb.from("orders").update({status_id:s.value}).eq("id",s.dataset.id);if(error)return alert(error.message);D.orders.find(x=>x.id===s.dataset.id).status_id=s.value;drawNav();ordersView()});
+ document.querySelectorAll("#sv [data-inv]").forEach(b=>b.onclick=async()=>{const x=D.orders.find(y=>y.id===b.dataset.inv),t0=b.textContent;b.disabled=true;b.textContent="جاري تجهيز الفاتورة...";try{const {data}=await sb.auth.getSession();const r=await fetch("/api/notify-order",{method:"POST",headers:{Authorization:"Bearer "+data.session.access_token,"Content-Type":"application/json"},body:JSON.stringify({order_id:x.id})});if(!r.ok)throw new Error("فشل تجهيز الفاتورة ("+r.status+")");const u=URL.createObjectURL(await r.blob()),a=document.createElement("a");a.href=u;a.download="invoice-"+x.order_no+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}catch(e){alert(e.message||"فشل")}b.disabled=false;b.textContent=t0});
  document.querySelectorAll("#sv [data-e]").forEach(b=>b.onclick=()=>{editO=D.orders.find(x=>x.id===b.dataset.e);showForm=true;ordersView();scrollTo(0,0)});
  document.querySelectorAll("#sv [data-d]").forEach(b=>b.onclick=async()=>{const x=D.orders.find(y=>y.id===b.dataset.d);if(!confirm("حذف الطلب #"+x.order_no+"؟"))return;const {error}=await sb.from("orders").delete().eq("id",x.id);if(error)return alert(error.message);D.orders=D.orders.filter(y=>y!==x);drawNav();ordersView()});
 }
@@ -248,7 +253,7 @@ async function saveOrder(){
  flash("om","جاري الحفظ...",true);
  try{
   const items=[...document.querySelectorAll(".item")].map(r=>({product_id:r.querySelector(".in-name").dataset.pid||null,product_name:r.querySelector(".in-name").value.trim(),qty:Math.max(1,parseInt(r.querySelector(".in-qty").value)||1),unit_price:num(r.querySelector(".in-price").value),unit_cost:num(r.querySelector(".in-cost").value)})).filter(i=>i.product_name);
-  const row={customer_name:$("oc").value.trim(),phone:$("oph").value.trim(),governorate:$("ogv").value||null,address:$("oa").value.trim(),notes:$("on").value.trim(),admin_notes:$("oan").value.trim()||null,status_id:$("os").value||null,order_date:$("odt").value||today(),total:num($("ot").value),shipping_cost:num($("osh").value)};
+  const row={customer_name:$("oc").value.trim(),phone:$("oph").value.trim(),governorate:$("ogv").value||null,address:$("oa").value.trim(),notes:$("on").value.trim(),admin_notes:$("oan").value.trim()||null,status_id:$("os").value||null,order_date:pdmy($("odt").value)||today(),total:num($("ot").value),shipping_cost:num($("osh").value)};
   if(!row.customer_name)return flash("om","اسم العميل مطلوب");if(!items.length)return flash("om","أضف منتج واحد على الأقل");
   let id,oldIds=[];
   if(editO){id=editO.id;oldIds=(editO.order_items||[]).map(i=>i.id);const {error}=await sb.from("orders").update(row).eq("id",id);if(error)throw error}
@@ -280,18 +285,18 @@ V.reports=()=>{
  const pm={};ok.forEach(o=>(o.order_items||[]).forEach(i=>{const k=i.product_id||i.product_name,g=pm[k]||(pm[k]={name:i.product_name,q:0,rev:0,pf:0});g.q+=i.qty;g.rev+=i.qty*Number(i.unit_price);g.pf+=i.qty*(Number(i.unit_price)-Number(i.unit_cost))}));
  const pl=Object.values(pm),tbl=(rows,h)=>`<div class="scroll"><table><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr>${rows.join("")||`<tr><td colspan=${h.length}>لا توجد بيانات</td></tr>`}</table></div>`;
  const days=grp(o=>o.order_date),months=grp(o=>o.order_date.slice(0,7));
- $("view").innerHTML=`<div class="box"><div class="row"><div><label>من</label><input id="rf" type="date" value="${rf}"></div><div><label>إلى</label><input id="rt" type="date" value="${rt}"></div></div>
+ $("view").innerHTML=`<div class="box"><div class="row"><div><label>من</label>${dIn("rf",dmy(rf))}</div><div><label>إلى</label>${dIn("rt",dmy(rt))}</div></div>
  <button class="sm gray" id="r1">هذا الشهر</button> <button class="sm gray" id="r2">آخر 30 يوم</button> <button class="sm gray" id="r3">الكل</button> <button class="sm" id="rcsv">تصدير التقرير CSV</button>
  <p class="hint">الربح = إجمالي الطلب - تكلفة المنتجات - تكلفة الشحن. الحالات غير المحسوبة: ${esc(D.statuses.filter(s=>!s.counts_in_profit).map(s=>s.name).join("، "))||"لا يوجد"} (من الإعدادات).</p></div>
  <div class="stat"><div>الطلبات<b>${ok.length}</b></div><div>المبيعات<b>${fmt(rev)}</b></div><div>التكلفة<b>${fmt(cost)}</b></div><div>الشحن<b>${fmt(ship)}</b></div><div>صافي الربح<b class="${profit>=0?"pos":"neg"}">${fmt(profit)}</b></div></div>
- <div class="box" style="margin-top:14px"><h3>حسب اليوم</h3>${tbl(days.slice(0,60).map(([k,g])=>`<tr><td>${k}</td><td>${g.n}</td><td>${fmt(g.rev)}</td><td>${fmt(g.pf)}</td></tr>`),["اليوم","الطلبات","المبيعات","الربح"])}</div>
+ <div class="box" style="margin-top:14px"><h3>حسب اليوم</h3>${tbl(days.slice(0,60).map(([k,g])=>`<tr><td dir="ltr">${dmy(k)}</td><td>${g.n}</td><td>${fmt(g.rev)}</td><td>${fmt(g.pf)}</td></tr>`),["اليوم","الطلبات","المبيعات","الربح"])}</div>
  <div class="box"><h3>حسب الشهر</h3>${tbl(months.map(([k,g])=>`<tr><td>${k}</td><td>${g.n}</td><td>${fmt(g.rev)}</td><td>${fmt(g.pf)}</td></tr>`),["الشهر","الطلبات","المبيعات","الربح"])}</div>
  <div class="box"><h3>الأكثر مبيعاً</h3>${tbl(pl.slice().sort((a,b)=>b.q-a.q).slice(0,10).map(g=>`<tr><td>${esc(g.name)}</td><td>${g.q}</td><td>${fmt(g.rev)}</td><td>${fmt(g.pf)}</td></tr>`),["المنتج","الكمية","المبيعات","الربح"])}</div>
  <div class="box"><h3>الأكثر ربحاً</h3>${tbl(pl.slice().sort((a,b)=>b.pf-a.pf).slice(0,10).map(g=>`<tr><td>${esc(g.name)}</td><td>${g.q}</td><td>${fmt(g.rev)}</td><td>${fmt(g.pf)}</td></tr>`),["المنتج","الكمية","المبيعات","الربح"])}</div>`;
  const set=(a,b)=>{rf=a;rt=b;V.reports()};
- $("rf").onchange=()=>set($("rf").value,$("rt").value);$("rt").onchange=()=>set($("rf").value,$("rt").value);
+ $("rf").onchange=()=>set(pdmy($("rf").value),pdmy($("rt").value));$("rt").onchange=()=>set(pdmy($("rf").value),pdmy($("rt").value));
  $("r1").onclick=()=>set(monthStart(),today());$("r2").onclick=()=>set(new Date(Date.now()-30*864e5).toISOString().slice(0,10),today());$("r3").onclick=()=>set("","");
- $("rcsv").onclick=()=>csv("report-"+today()+".csv",[["ملخص","الطلبات",ok.length,"المبيعات",rev,"التكلفة",cost,"الشحن",ship,"الربح",profit],[],["اليوم","الطلبات","المبيعات","الربح"],...days.map(([k,g])=>[k,g.n,g.rev,g.pf]),[],["الشهر","الطلبات","المبيعات","الربح"],...months.map(([k,g])=>[k,g.n,g.rev,g.pf]),[],["المنتج","الكمية","المبيعات","الربح"],...pl.sort((a,b)=>b.q-a.q).map(g=>[g.name,g.q,g.rev,g.pf])]);
+ $("rcsv").onclick=()=>csv("report-"+today()+".csv",[["ملخص","الطلبات",ok.length,"المبيعات",rev,"التكلفة",cost,"الشحن",ship,"الربح",profit],[],["اليوم","الطلبات","المبيعات","الربح"],...days.map(([k,g])=>[dmy(k),g.n,g.rev,g.pf]),[],["الشهر","الطلبات","المبيعات","الربح"],...months.map(([k,g])=>[k,g.n,g.rev,g.pf]),[],["المنتج","الكمية","المبيعات","الربح"],...pl.sort((a,b)=>b.q-a.q).map(g=>[g.name,g.q,g.rev,g.pf])]);
 };
 
 /* ---------- store look (everything on the home page) ---------- */
