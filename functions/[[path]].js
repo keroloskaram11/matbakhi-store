@@ -12,7 +12,7 @@ import feed from "../netlify/functions/feed.mjs";
 
 export const onRequest = async (c) => {
   const u0 = new URL(c.request.url);
-  const cacheable = c.request.method === "GET" && !u0.search && !/^\/(api|admin)/.test(u0.pathname);
+  const cacheable = false; /* live data: no edge caching, dashboard changes show on refresh */
   const ck = cacheable ? new Request(u0.origin + u0.pathname, { method: "GET" }) : null;
   if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
   const res = await handle(c);
