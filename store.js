@@ -13,9 +13,11 @@
   function inject(code) { const s = document.createElement("script"); s.textContent = code; document.head.appendChild(s) }
   (function pixels() {
     const m = (S.meta_pixel_id || "").trim(), t = (S.tiktok_pixel_id || "").trim(), g = (S.ga_id || "").trim();
-    if (/^\d{5,20}$/.test(m)) inject("!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + m + "');fbq('track','PageView');");
-    if (/^[A-Za-z0-9]{8,30}$/.test(t)) inject("!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement('script');o.type='text/javascript',o.async=!0,o.src=i+'?sdkid='+e+'&lib='+t;var a=document.getElementsByTagName('script')[0];a.parentNode.insertBefore(o,a)};ttq.load('" + t + "');ttq.page()}(window,document,'ttq');");
-    if (/^(G|AW)-[A-Za-z0-9-]{4,20}$/.test(g)) { const s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + g; document.head.appendChild(s); inject("window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','" + g + "');") }
+    const on = k => S[k] !== "0", gt = (S.gtm_id || "").trim();
+    if (/^\d{5,20}$/.test(m) && on("app_meta_on")) inject("!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + m + "');fbq('track','PageView');");
+    if (/^[A-Za-z0-9]{8,30}$/.test(t) && on("app_tiktok_on")) inject("!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement('script');o.type='text/javascript',o.async=!0,o.src=i+'?sdkid='+e+'&lib='+t;var a=document.getElementsByTagName('script')[0];a.parentNode.insertBefore(o,a)};ttq.load('" + t + "');ttq.page()}(window,document,'ttq');");
+    if (/^GTM-[A-Z0-9]{4,12}$/.test(gt) && on("app_gtm_on")) inject("window.dataLayer=window.dataLayer||[];(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f)})(window,document,'script','dataLayer','" + gt + "');");
+    if (/^(G|AW)-[A-Za-z0-9-]{4,20}$/.test(g) && on("app_ga_on")) { const s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + g; document.head.appendChild(s); inject("window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','" + g + "');") }
   })();
   const sid = (() => { try { let v = localStorage.getItem("sid"); if (!v || v.length < 16) { v = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2) + "-anon0000"; localStorage.setItem("sid", v) } return v } catch (e) { return "" } })();
   const logEv = k => { if (!sid || navigator.doNotTrack === "1") return; try { fetch(window.SUPABASE_URL + "/rest/v1/rpc/log_event", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_sid: sid, p_kind: k, p_path: location.pathname, p_website: "" }), keepalive: true }).catch(() => {}) } catch (e) {} };
@@ -23,20 +25,22 @@
   // ev: AddToCart | InitiateCheckout | Purchase | Lead ; d: {value, items:[{id,name,price,qty}], order_no}
   function track(ev, d) {
     d = d || {}; const items = d.items || []; if (ev === "AddToCart") logEv("cart"); else if (ev === "InitiateCheckout") logEv("checkout");
-    const ids = items.map(i => String(i.id)), cur = "EGP";
+    const ids = items.map(i => String(i.id)), cur = "EGP", eid = ev === "Purchase" && d.order_no ? "p" + d.order_no : null;
     try { if (window.fbq) {
       const p = { value: d.value, currency: cur };
       if (ev !== "Lead") { p.content_ids = ids; p.content_type = "product"; p.contents = items.map(i => ({ id: String(i.id), quantity: i.qty })); p.num_items = items.reduce((a, i) => a + i.qty, 0) }
       else p.content_name = d.name;
-      fbq("track", ev, p) } } catch (e) {}
+      if (eid) fbq("track", ev, p, { eventID: eid }); else fbq("track", ev, p) } } catch (e) {}
     try { if (window.ttq) {
       const map = { Purchase: "PlaceAnOrder", Lead: "Contact" };
-      ttq.track(map[ev] || ev, { value: d.value, currency: cur, contents: items.map(i => ({ content_id: String(i.id), content_name: i.name, quantity: i.qty, price: i.price })), content_type: "product" }) } } catch (e) {}
+      ttq.track(map[ev] || ev, { value: d.value, currency: cur, contents: items.map(i => ({ content_id: String(i.id), content_name: i.name, quantity: i.qty, price: i.price })), content_type: "product", ...(eid ? { event_id: eid } : {}) }) } } catch (e) {}
     try { if (window.gtag) {
-      const map = { AddToCart: "add_to_cart", InitiateCheckout: "begin_checkout", Purchase: "purchase", Lead: "generate_lead" };
+      const map = { ViewContent: "view_item", AddToCart: "add_to_cart", InitiateCheckout: "begin_checkout", Purchase: "purchase", Lead: "generate_lead" };
       gtag("event", map[ev], { value: d.value, currency: cur, ...(d.order_no ? { transaction_id: String(d.order_no) } : {}), items: items.map(i => ({ item_id: String(i.id), item_name: i.name, price: i.price, quantity: i.qty })) }) } } catch (e) {}
   }
-  window.StoreTrack = track;
+  try { if (/^GTM-/.test((S.gtm_id || "").trim()) && S.app_gtm_on !== "0") { const gm = { ViewContent: "view_item", AddToCart: "add_to_cart", InitiateCheckout: "begin_checkout", Purchase: "purchase" }, _t = track; window.StoreTrack = (ev, d) => { _t(ev, d); d = d || {}; if (gm[ev]) { window.dataLayer = window.dataLayer || []; dataLayer.push({ ecommerce: null }); dataLayer.push({ event: gm[ev], ecommerce: { currency: "EGP", value: d.value, ...(d.order_no ? { transaction_id: String(d.order_no) } : {}), items: (d.items || []).map(i => ({ item_id: String(i.id), item_name: i.name, price: i.price, quantity: i.qty })) } }) } }; track = window.StoreTrack } } catch (e) {}
+  window.StoreTrack = window.StoreTrack || track;
+  try { const pa = document.querySelector(".pinfo [data-add],.stick [data-add]"); if (pa && window.StoreTrack) setTimeout(() => window.StoreTrack("ViewContent", { value: Number(pa.dataset.price), items: [{ id: pa.dataset.id, name: pa.dataset.name, price: Number(pa.dataset.price), qty: 1 }] }), 600) } catch (e) {}
 
   /* ---------- cart (prices shown here are for display; the server re-prices everything) ---------- */
   let cart = [], waMode = false, coupon = null, couponOn = null, payId = "cod", proofPath = null;
