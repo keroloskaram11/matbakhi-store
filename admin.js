@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
 const V={};let tab="home";
 async function fetchAll(build){let out=[],from=0;for(;;){const {data,error}=await build().range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
 const flash=(id,t,ok)=>{const e=$(id);if(e){e.textContent=t;e.className=ok?"ok":"msg"}};
@@ -223,6 +223,32 @@ V.abandoned=async()=>{
  ${rows.some(r=>r.done)?`<button class="sm gray" id="abclean" type="button">مسح اللي اتأكدت طلباتها (${rows.filter(r=>r.done).length})</button>`:""}</div>`;
  document.querySelectorAll("#view [data-ab]").forEach(b=>b.onclick=async()=>{if(!confirm("حذف السجل ده؟"))return;const {error}=await sb.from("abandoned_checkouts").delete().eq("id",b.dataset.ab);if(error)return alert(error.message);V.abandoned()});
  if($("abclean"))$("abclean").onclick=async()=>{const ids=rows.filter(r=>r.done).map(r=>r.id);const {error}=await sb.from("abandoned_checkouts").delete().in("id",ids);if(error)return alert(error.message);V.abandoned()};
+};
+
+/* ---------- analytics ---------- */
+let anDays=30;
+V.analytics=async()=>{
+ $("view").innerHTML="جاري التحميل...";
+ const {data:A,error}=await sb.rpc("admin_analytics",{p_days:anDays});
+ if(error){$("view").innerHTML=`<div class="box msg">تعذر التحميل: ${esc(error.message)}</div>`;return}
+ const since=new Date(Date.now()-anDays*864e5).toISOString(),ok=o=>(stOf(o.status_id)||{counts_in_profit:true}).counts_in_profit;
+ const os=D.orders.filter(o=>o.created_at>=since&&o.source==="web"),all=D.orders.filter(o=>o.created_at>=since),oc=all.filter(ok);
+ const pct=(a,b)=>b?Math.round(a/b*100)+"%":"-";
+ const gv={};oc.forEach(o=>{const g=o.governorate||"غير محدد";gv[g]=gv[g]||{n:0,t:0};gv[g].n++;gv[g].t+=Number(o.total)||0});
+ const gl=Object.entries(gv).sort((a,b)=>b[1].n-a[1].n),gmax=gl.length?gl[0][1].n:1;
+ const out=D.products.filter(p=>p.in_stock===false),hidden=D.products.filter(p=>!p.active).length;
+ const nameBySlug=new Map(D.products.map(p=>[p.slug,p.name]));
+ const dmax=Math.max(1,...A.daily.map(d=>d.visitors));
+ $("view").innerHTML=`<div class="box"><div class="row"><label>الفترة</label><select id="and"><option value="7" ${anDays===7?"selected":""}>آخر 7 أيام</option><option value="30" ${anDays===30?"selected":""}>آخر 30 يوم</option><option value="90" ${anDays===90?"selected":""}>آخر 90 يوم</option></select></div>
+ <p class="hint">الزيارات بتتسجل من أول ما التحليلات اشتغلت فقط، وبدون أي بيانات شخصية: معرّف عشوائي مجهول على جهاز الزائر وصفحة الزيارة. مفيش IP ولا اسم ولا موبايل. الزائر اللي بيشغّل "Do Not Track" مش بيتسجل.</p>
+ <div class="stat"><div>زوار مختلفين<b>${A.visitors}</b></div><div>مشاهدات صفحات<b>${A.views}</b></div><div>طلبات<b>${all.length}</b></div><div>إجمالي المبيعات<b>${fmt(oc.reduce((a,o)=>a+Number(o.total||0),0))}</b></div></div></div>
+ <div class="box"><h3>قمع الشراء</h3><table><tr><th>المرحلة</th><th>العدد</th><th>من اللي قبلها</th></tr>
+ <tr><td>زاروا المتجر</td><td>${A.visitors}</td><td></td></tr><tr><td>أضافوا للسلة</td><td>${A.cart}</td><td>${pct(A.cart,A.visitors)}</td></tr><tr><td>بدأوا إتمام الطلب</td><td>${A.checkout}</td><td>${pct(A.checkout,A.cart)}</td></tr><tr><td>أتموا الطلب (من الموقع)</td><td>${os.length}</td><td>${pct(os.length,A.checkout)}</td></tr></table></div>
+ <div class="box"><h3>الزوار يوم بيوم</h3>${A.daily.length?A.daily.map(d=>`<div class="ord"><span dir="ltr">${esc(d.d)}</span> <div style="display:inline-block;height:10px;background:#7c3f1d;border-radius:5px;width:${Math.max(4,Math.round(d.visitors/dmax*60))}%"></div> <b>${d.visitors}</b> زائر / ${d.views} مشاهدة</div>`).join(""):"<p>لسه مفيش زيارات متسجلة.</p>"}</div>
+ <div class="box"><h3>أكتر المنتجات مشاهدة</h3>${A.top.length?A.top.map(t=>{const sl=decodeURIComponent(t.path.replace("/p/",""));return `<div class="ord">${esc(nameBySlug.get(sl)||sl)} <b>${t.views}</b></div>`}).join(""):"<p>لسه مفيش بيانات.</p>"}</div>
+ <div class="box"><h3>الطلبات حسب المحافظة (غير الملغية)</h3>${gl.length?gl.map(([g,v])=>`<div class="ord">${esc(g)}: <b>${v.n}</b> طلب - ${fmt(v.t)} جنيه <div style="height:8px;background:#7c3f1d;border-radius:4px;width:${Math.max(4,Math.round(v.n/gmax*100))}%"></div></div>`).join(""):"<p>مفيش طلبات في الفترة دي.</p>"}</div>
+ <div class="box"><h3>المخزون</h3><p>منتجات معلّمة "نفذت الكمية": <b>${out.length}</b> - منتجات مخفية: <b>${hidden}</b> - إجمالي المنتجات: <b>${D.products.length}</b></p><p class="hint">المخزون عندك حالة متوفر/نفذ مش كميات، عشان كده مفيش عدّاد كميات.</p>${out.slice(0,40).map(p=>`<div class="ord">${esc(p.name)}</div>`).join("")}</div>`;
+ $("and").onchange=()=>{anDays=+$("and").value;V.analytics()};
 };
 
 /* ---------- categories ---------- */

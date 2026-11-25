@@ -17,9 +17,12 @@
     if (/^[A-Za-z0-9]{8,30}$/.test(t)) inject("!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement('script');o.type='text/javascript',o.async=!0,o.src=i+'?sdkid='+e+'&lib='+t;var a=document.getElementsByTagName('script')[0];a.parentNode.insertBefore(o,a)};ttq.load('" + t + "');ttq.page()}(window,document,'ttq');");
     if (/^(G|AW)-[A-Za-z0-9-]{4,20}$/.test(g)) { const s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + g; document.head.appendChild(s); inject("window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','" + g + "');") }
   })();
+  const sid = (() => { try { let v = localStorage.getItem("sid"); if (!v || v.length < 16) { v = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2) + "-anon0000"; localStorage.setItem("sid", v) } return v } catch (e) { return "" } })();
+  const logEv = k => { if (!sid || navigator.doNotTrack === "1") return; try { fetch(window.SUPABASE_URL + "/rest/v1/rpc/log_event", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_sid: sid, p_kind: k, p_path: location.pathname, p_website: "" }), keepalive: true }).catch(() => {}) } catch (e) {} };
+  setTimeout(() => logEv("view"), 400);
   // ev: AddToCart | InitiateCheckout | Purchase | Lead ; d: {value, items:[{id,name,price,qty}], order_no}
   function track(ev, d) {
-    d = d || {}; const items = d.items || [];
+    d = d || {}; const items = d.items || []; if (ev === "AddToCart") logEv("cart"); else if (ev === "InitiateCheckout") logEv("checkout");
     const ids = items.map(i => String(i.id)), cur = "EGP";
     try { if (window.fbq) {
       const p = { value: d.value, currency: cur };
