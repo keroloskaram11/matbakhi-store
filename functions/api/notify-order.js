@@ -47,7 +47,7 @@ ${o.notes ? `<div class="full"><span>ملاحظات: </span>${esc(o.notes)}</div
 <table><tr><th>الصورة</th><th>المنتج</th><th>سعر الوحدة</th><th>الكمية</th><th>الإجمالي</th></tr>
 ${items.map(i => `<tr><td class="im">${safeUrl(i.image_url) ? `<img src="${esc(i.image_url)}">` : '<div class="noimg"></div>'}</td><td class="nm">${esc(i.product_name)}</td><td>${fmt(i.unit_price)} جنيه</td><td>${esc(i.qty)}</td><td><b>${fmt(i.qty * i.unit_price)} جنيه</b></td></tr>`).join("")}</table>
 <div class="tot"><div><span>إجمالي المنتجات</span><b>${fmt(sub)} جنيه</b></div><div><span>الشحن</span><b>${ship > 0 ? fmt(ship) + " جنيه" : "مجاني"}</b></div><div class="g"><span>الإجمالي المطلوب</span><span>${fmt(o.total)} جنيه</span></div></div>
-<div class="pay">طريقة الدفع: الدفع عند الاستلام</div></div>
+<div class="pay">${esc(o.payment_status === "pending" ? `طريقة الدفع: ${o.payment_method || ""} - بانتظار تأكيد الدفع` : o.payment_status === "paid" ? `طريقة الدفع: ${o.payment_method || ""} - تم تأكيد الدفع` : "طريقة الدفع: الدفع عند الاستلام")}${o.payment_ref ? esc(" - رقم العملية: " + o.payment_ref) : ""}</div></div>
 <div class="ft"><div><b>شكراً لثقتك في ${esc(name)}</b><small>للطلب بالجملة وأي استفسار تواصل معنا على واتساب</small></div><div><b class="num">${esc(waShow)}</b>${st.site_url ? `<small class="num">${esc(String(st.site_url).replace(/^https?:\/\//, ""))}</small>` : ""}</div></div>
 </div></body></html>`;
 }
@@ -61,7 +61,7 @@ export const onRequestPost = async ({ request, env }) => {
     const H = { apikey: KEY, Authorization: auth };
     const u = await fetch("https://vezbhmmufmvgquoujylm.supabase.co/auth/v1/user", { headers: H });
     if (!u.ok || !/^[0-9a-f-]{36}$/i.test(String(d.order_id || ""))) return new Response("forbidden", { status: 403 });
-    const r = await (await fetch(`${SB}/orders?id=eq.${d.order_id}&select=order_no,customer_name,phone,address,governorate,notes,total,created_at,order_items(product_id,product_name,qty,unit_price)`, { headers: H })).json().catch(() => []);
+    const r = await (await fetch(`${SB}/orders?id=eq.${d.order_id}&select=order_no,customer_name,phone,address,governorate,notes,total,created_at,payment_method,payment_status,payment_ref,order_items(product_id,product_name,qty,unit_price)`, { headers: H })).json().catch(() => []);
     if (!Array.isArray(r) || !r[0]) return new Response("not found", { status: 404 });
     o = r[0]; items = (o.order_items || []).slice(0, 30); download = true;
     const ids = items.map(i => i.product_id).filter(Boolean);
