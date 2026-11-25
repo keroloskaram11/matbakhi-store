@@ -39,7 +39,7 @@ async function tiersFor(prods) {
   const m = {}; rows.forEach(r => (m[r.product_id] = m[r.product_id] || []).push(r)); return m;
 }
 const categories = () => rest("categories?select=id,name,slug,image_url,description,sort_order,show_home,show_menu,show_footer&active=eq.true&order=sort_order.asc,name.asc");
-const PCOLS = "id,name,slug,description,price,sale_price,image_url,category_id,updated_at,created_at,in_stock,featured,min_order_qty,images,attributes";
+const PCOLS = "id,name,slug,description,price,sale_price,image_url,category_id,updated_at,created_at,in_stock,featured,min_order_qty,images,attributes,listed";
 
 function baseUrl(req, S) {
   const u = (S.site_url || "").trim().replace(/\/+$/, "");
