@@ -5,7 +5,7 @@ export default async (req, context) => {
     const S = await L.settings(), b = L.baseUrl(req, S);
     const cats = await L.categories();
     let prods = [], from = 0;
-    for (;;) { const d = await L.rest(`products?select=slug,image_url,name,updated_at&active=eq.true&order=created_at.desc&limit=1000&offset=${from}`); prods = prods.concat(d); if (d.length < 1000) break; from += 1000 }
+    for (;;) { const d = await L.rest(`products?select=slug,image_url,name,updated_at&listed=eq.true&order=created_at.desc&limit=1000&offset=${from}`); prods = prods.concat(d); if (d.length < 1000) break; from += 1000 }
     const day = d => (d ? String(d).slice(0, 10) : null);
     const url = (loc, lm, extra) => `<url><loc>${x(loc)}</loc>${lm ? `<lastmod>${lm}</lastmod>` : ""}${extra || ""}</url>`;
     const out = [url(b + "/"), url(b + "/products"), url(b + "/wholesale"), ...cats.map(c => url(L.cUrl(b, c))),

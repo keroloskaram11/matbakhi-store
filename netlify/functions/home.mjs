@@ -3,8 +3,8 @@ const DEFAULT = [{ k: "intro", on: true }, { k: "reviews", on: true }, { k: "cat
 export default async (req, context) => {
   try {
     const [S, cats, Z, latest, featured] = await Promise.all([L.settings(), L.categories(), L.zones(),
-      L.rest(`products?select=${L.PCOLS}&active=eq.true&order=created_at.desc&limit=24`),
-      L.rest(`products?select=${L.PCOLS}&active=eq.true&featured=eq.true&order=created_at.desc&limit=12`)]);
+      L.rest(`products?select=${L.PCOLS}&listed=eq.true&order=created_at.desc&limit=24`),
+      L.rest(`products?select=${L.PCOLS}&listed=eq.true&featured=eq.true&order=created_at.desc&limit=12`)]);
     const tm = await L.tiersFor([...latest, ...featured].filter((p, i, a) => a.findIndex(x => x.id === p.id) === i));
     const homeCats = cats.filter(c => c.show_home !== false);
     const b = L.baseUrl(req, S), name = S.store_name || "المتجر";
@@ -22,12 +22,12 @@ export default async (req, context) => {
     }
     let cs = []; try { cs = JSON.parse(S.home_cat_sections || "[]") } catch (e) {}
     cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
-    const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
+    const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&listed=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
     const csTm = await L.tiersFor(csData.flat().filter((p, i, a) => a.findIndex(y => y.id === p.id) === i));
     const bgOf = v => /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : "";
     const lnkOk = v => /^(\/(?!\/)|https:\/\/)/.test(String(v || ""));
     const cust = layoutCfg.filter(x => x.k === "cat" && x.on && x.slug).map(x => ({ x, c: cats.find(c => c.slug === x.slug), n: Math.min(24, Math.max(2, Number(x.n) || 8)) })).filter(y => y.c).slice(0, 12);
-    const custData = await Promise.all(cust.map(y => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(y.c.id)}&order=created_at.desc&limit=${y.n}`).catch(() => [])));
+    const custData = await Promise.all(cust.map(y => L.rest(`products?select=${L.PCOLS}&listed=eq.true&category_id=eq.${encodeURIComponent(y.c.id)}&order=created_at.desc&limit=${y.n}`).catch(() => [])));
     const custTm = await L.tiersFor(custData.flat().filter((p, i, a) => a.findIndex(y => y.id === p.id) === i));
     const sec = {
       cat: x => { const i = cust.findIndex(y => y.x === x); if (i < 0 || !custData[i].length) return ""; const y = cust[i], bg = bgOf(x.bg), cols = [1, 2, 3].includes(+x.cols) ? +x.cols : 2, cards = L.cardsHtml(custData[i], custTm);

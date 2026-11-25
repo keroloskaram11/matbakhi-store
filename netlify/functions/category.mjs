@@ -19,14 +19,14 @@ export default async (req, context) => {
     const grouped = !cat && !filtered;
     let prods, total;
     if (grouped) {
-      const light = await L.rest(`products?select=id,category_id,created_at&active=eq.true&order=created_at.desc&limit=3000`);
+      const light = await L.rest(`products?select=id,category_id,created_at&listed=eq.true&order=created_at.desc&limit=3000`);
       const rank = id => { const i = cats.findIndex(c => c.id === id); return i < 0 ? 9999 : i };
       const sorted = light.map((x, i) => ({ ...x, r: rank(x.category_id), i })).sort((a, b) => a.r - b.r || a.i - b.i);
       total = sorted.length;
       const ids = sorted.slice((page - 1) * PER, page * PER).map(x => x.id);
       const rows = ids.length ? await L.rest(`products?select=${L.PCOLS}&id=in.(${ids.map(encodeURIComponent).join(",")})`) : [];
       prods = ids.map(id => rows.find(r => r.id === id)).filter(Boolean);
-    } else ({ data: prods, total } = await L.rest(`products?select=${L.PCOLS}&active=eq.true${filter}&order=${order}&limit=${PER}&offset=${(page - 1) * PER}`, { count: true }));
+    } else ({ data: prods, total } = await L.rest(`products?select=${L.PCOLS}&listed=eq.true${filter}&order=${order}&limit=${PER}&offset=${(page - 1) * PER}`, { count: true }));
     const pages = Math.max(1, Math.ceil(total / PER));
     const tm = await L.tiersFor(prods);
     if (page > pages) return L.notFound(req, S, cats, "الصفحة");

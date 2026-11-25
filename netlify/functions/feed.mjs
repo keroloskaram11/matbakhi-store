@@ -9,7 +9,7 @@ export default async (req) => {
   const b = L.baseUrl(req, S), brand = S.store_name || "";
   let prods = [];
   for (let from = 0; ; from += 1000) {
-    const d = await L.rest(`products?select=id,name,description,price,sale_price,image_url,slug,in_stock&active=eq.true&price=gt.1&order=created_at.desc&limit=1000&offset=${from}`);
+    const d = await L.rest(`products?select=id,name,description,price,sale_price,image_url,slug,in_stock&listed=eq.true&price=gt.1&order=created_at.desc&limit=1000&offset=${from}`);
     prods = prods.concat(d); if (d.length < 1000) break;
   }
   prods = prods.filter(p => p.slug && p.name && L.safeUrl(p.image_url) && Number(p.price) > 0);
