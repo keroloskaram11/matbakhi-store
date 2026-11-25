@@ -292,11 +292,11 @@ document.addEventListener("click", e => {
   document.querySelectorAll("[data-hs]").forEach(root => {
     const sl = [...root.querySelectorAll(".hs-slide")], dots = [...root.querySelectorAll(".hs-dots button")];
     if (sl.length < 2) return;
-    const hold = Math.max(1000, +root.dataset.ms || 2000), still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const hold = Math.max(1000, +root.dataset.ms || 2000), still = false;
     let i = 0, t = null, paused = false;
     const show = n => { i = (n + sl.length) % sl.length; sl.forEach((s, k) => s.classList.toggle("on", k === i)); dots.forEach((d, k) => d.classList.toggle("on", k === i)) };
     const stop = () => { clearTimeout(t); t = null };
-    const loop = () => { stop(); if (paused || still || document.hidden) return; t = setTimeout(() => { show(i + 1); loop() }, hold + 900) };
+    const loop = () => { stop(); if (paused || still || document.hidden) return; t = setTimeout(() => { show(i + 1); loop() }, hold) };
     dots.forEach((d, k) => d.addEventListener("click", () => { show(k); loop() }));
     let x0 = null, resume = null;
     root.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; paused = true; stop(); clearTimeout(resume) }, { passive: true });
