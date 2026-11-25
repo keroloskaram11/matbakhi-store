@@ -106,6 +106,7 @@
   function open() { $("ov").hidden = false; $("drawer").hidden = false; view("cart") }
   function close() { $("ov").hidden = true; $("drawer").hidden = true }
   $("ov").onclick = close; $("dclose").onclick = close; $("cartBtn").onclick = open;
+  window.addEventListener("message", e => { const d = e.data; if (!d || d.ocode !== 1) return; for (const f of document.querySelectorAll("iframe.codef")) if (f.contentWindow === e.source) f.style.height = Math.max(40, Math.min(3000, Math.ceil(Number(d.h) || 0))) + "px" });
   document.addEventListener("click", e => {
     const ot = e.target.closest("[data-ostphone]"); if (ot) { try { if (window.__lastPhone) sessionStorage.setItem("trk", window.__lastPhone) } catch (x) {} }
     const a = e.target.closest("[data-add]"); if (a) { let tiers = []; try { tiers = JSON.parse(a.dataset.tiers || "[]") } catch (x) {} const pq = $("pq"); const inPage = a.closest(".pinfo,.stick"); const base = { id: a.dataset.id, name: a.dataset.name, price: Number(a.dataset.price), image: a.dataset.image, slug: a.dataset.slug, min: parseInt(a.dataset.min) || 1, tiers };
