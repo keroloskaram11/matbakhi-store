@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
 const V={};let tab="home";
 async function fetchAll(build){let out=[],from=0;for(;;){const {data,error}=await build().range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
 const flash=(id,t,ok)=>{const e=$(id);if(e){e.textContent=t;e.className=ok?"ok":"msg"}};
@@ -168,6 +168,27 @@ async function saveProduct(){
   editP=null;gal=[];V.products();flash("pm","تم الحفظ",true);
  }catch(e){flash("pm","خطأ: "+e.message)}
 }
+
+/* ---------- customers (built from orders, grouped by phone) ---------- */
+let custQ="",custOpen=null;
+const normPh=p=>{p=String(p||"").replace(/[\u0660-\u0669]/g,d=>d.charCodeAt(0)-0x660).replace(/\D/g,"");return p.length>=10?p.slice(-10):p};
+function buildCustomers(){const m=new Map();
+ D.orders.forEach(o=>{const k=normPh(o.phone)||("n:"+o.customer_name);let c=m.get(k);if(!c){c={key:k,name:o.customer_name,phone:o.phone,gov:o.governorate,orders:[],spend:0,cnt:0,first:o.created_at,last:o.created_at};m.set(k,c)}
+  c.orders.push(o);const st=stOf(o.status_id)||{counts_in_profit:true};if(st.counts_in_profit){c.spend+=Number(o.total)||0;c.cnt++}
+  if(o.created_at>c.last){c.last=o.created_at;c.name=o.customer_name;c.gov=o.governorate||c.gov}if(o.created_at<c.first)c.first=o.created_at});
+ return [...m.values()].sort((a,b)=>b.spend-a.spend||(b.last>a.last?1:-1))}
+V.customers=()=>{
+ const all=buildCustomers(),q=custQ.trim().toLowerCase(),list=all.filter(c=>!q||(c.name||"").toLowerCase().includes(q)||String(c.phone||"").includes(q));
+ const tot=all.reduce((a,c)=>a+c.spend,0),rep=all.filter(c=>c.orders.length>1).length;
+ $("view").innerHTML=`<div class="box"><div class="stat"><div>عدد العملاء<b>${all.length}</b></div><div>عملاء كرروا الشراء<b>${rep}</b></div></div>
+ <p class="hint">العملاء بيتجمعوا من الطلبات بنفس رقم الموبايل. إجمالي الإنفاق بيحسب الطلبات اللي حالتها بتدخل في الأرباح (غير الملغية). إجمالي الكل: ${fmt(tot)} جنيه.</p>
+ <div class="row"><input id="cq" placeholder="بحث بالاسم أو الموبايل" value="${esc(custQ)}"> <button class="sm gray" id="ccsv" type="button">تصدير العملاء CSV</button></div>
+ <p>عدد النتائج: ${list.length}</p><div class="scroll"><table><tr><th>العميل</th><th>الموبايل</th><th>المحافظة</th><th>الطلبات</th><th>إجمالي الإنفاق</th><th>آخر طلب</th><th></th></tr>
+ ${list.slice(0,200).map(c=>`<tr><td>${esc(c.name)}</td><td dir="ltr">${esc(c.phone)}</td><td>${esc(c.gov||"")}</td><td>${c.orders.length}</td><td>${fmt(c.spend)}</td><td>${dmy(c.last)}</td><td><button class="sm" data-c="${esc(c.key)}">${custOpen===c.key?"إخفاء":"الطلبات"}</button></td></tr>${custOpen===c.key?`<tr><td colspan="7"><div class="oact" style="flex-direction:column;align-items:stretch">${c.orders.map(o=>`<div class="ord"><b>#${o.order_no}</b> ${dmy(o.created_at)} - ${esc((stOf(o.status_id)||{}).name||"")} - ${fmt(o.total)} جنيه${o.payment_method&&o.payment_status&&o.payment_status!=="cod"?" - "+esc(o.payment_method)+(o.payment_status==="paid"?" (مدفوع)":" (بانتظار تأكيد الدفع)"):""}</div>`).join("")}</div></td></tr>`:""}`).join("")}</table></div>${list.length>200?"<p class='hint'>أول 200 نتيجة، استخدم البحث.</p>":""}</div>`;
+ $("cq").oninput=()=>{custQ=$("cq").value;const p=$("cq").selectionStart;V.customers();$("cq").focus();$("cq").setSelectionRange(p,p)};
+ document.querySelectorAll("#view [data-c]").forEach(b=>b.onclick=()=>{custOpen=custOpen===b.dataset.c?null:b.dataset.c;V.customers()});
+ $("ccsv").onclick=()=>csv("customers-"+today()+".csv",[["الاسم","الموبايل","المحافظة","عدد الطلبات","إجمالي الإنفاق","أول طلب","آخر طلب"]].concat(list.map(c=>[c.name,c.phone,c.gov||"",c.orders.length,c.spend,c.first.slice(0,10),c.last.slice(0,10)])));
+};
 
 /* ---------- categories ---------- */
 let editC=null;
