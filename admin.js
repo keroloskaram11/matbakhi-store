@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
 const V={};let tab="home";
 async function fetchAll(build){let out=[],from=0;for(;;){const {data,error}=await build().range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
 const flash=(id,t,ok)=>{const e=$(id);if(e){e.textContent=t;e.className=ok?"ok":"msg"}};
@@ -188,6 +188,24 @@ V.customers=()=>{
  $("cq").oninput=()=>{custQ=$("cq").value;const p=$("cq").selectionStart;V.customers();$("cq").focus();$("cq").setSelectionRange(p,p)};
  document.querySelectorAll("#view [data-c]").forEach(b=>b.onclick=()=>{custOpen=custOpen===b.dataset.c?null:b.dataset.c;V.customers()});
  $("ccsv").onclick=()=>csv("customers-"+today()+".csv",[["الاسم","الموبايل","المحافظة","عدد الطلبات","إجمالي الإنفاق","أول طلب","آخر طلب"]].concat(list.map(c=>[c.name,c.phone,c.gov||"",c.orders.length,c.spend,c.first.slice(0,10),c.last.slice(0,10)])));
+};
+
+/* ---------- abandoned checkouts ---------- */
+V.abandoned=async()=>{
+ $("view").innerHTML="جاري التحميل...";
+ const {data,error}=await sb.from("abandoned_checkouts").select("*").order("updated_at",{ascending:false}).limit(500);
+ if(error){$("view").innerHTML=`<div class="box msg">تعذر التحميل: ${esc(error.message)}</div>`;return}
+ const byPh=new Map();D.orders.forEach(o=>{const k=normPh(o.phone);(byPh.get(k)||byPh.set(k,[]).get(k)).push(o)});
+ const rows=data.map(a=>{const k=normPh(a.phone),done=(byPh.get(k)||[]).some(o=>o.created_at>=a.created_at);return {...a,done,mins:Math.round((Date.now()-new Date(a.updated_at))/60000)}});
+ const open=rows.filter(r=>!r.done),wait=r=>r.mins<30;
+ const ago=m=>m<60?m+" دقيقة":m<1440?Math.round(m/60)+" ساعة":Math.round(m/1440)+" يوم";
+ const wa=r=>{const p="2"+String(r.phone).replace(/^0/,"");const t=`أهلاً ${r.name||""}، لاحظنا إنك بدأت طلب من مطبخي بالجملة ومكملتوش. تحب نساعدك تكمله؟`;return "https://wa.me/"+p+"?text="+encodeURIComponent(t)};
+ $("view").innerHTML=`<div class="box"><p class="hint">بيتسجل الطلب هنا لما العميل يكتب رقم موبايل صحيح في صفحة إتمام الطلب ويسيبها من غير ما يؤكد. أي طلب اتأكد بنفس الرقم بعد كده بيتشال من القايمة تلقائياً. الرسالة بتتبعت بضغطتك إنت على زرار واتساب، مفيش رسايل بتتبعت أوتوماتيك.</p>
+ <div class="stat"><div>سلات متروكة<b>${open.filter(r=>!wait(r)).length}</b></div><div>قيد الإتمام (أقل من 30 دقيقة)<b>${open.filter(wait).length}</b></div><div>قيمتها<b>${fmt(open.reduce((a,r)=>a+Number(r.total),0))}</b></div></div>
+ ${open.length?`<div class="scroll"><table><tr><th>العميل</th><th>الموبايل</th><th>المحافظة</th><th>المنتجات</th><th>القيمة</th><th>من</th><th></th></tr>${open.map(r=>`<tr><td>${esc(r.name||"-")}</td><td dir="ltr">${esc(r.phone)}</td><td>${esc(r.governorate||"")}</td><td>${(r.items||[]).map(i=>esc(i.name)+" ×"+esc(i.qty)).join("<br>")}</td><td>${fmt(r.total)}</td><td>${wait(r)?"قيد الإتمام":ago(r.mins)}</td><td><a class="sm" target="_blank" rel="noopener" href="${esc(wa(r))}">واتساب</a> <button class="sm red" data-ab="${esc(r.id)}">حذف</button></td></tr>`).join("")}</table></div>`:"<p>مفيش سلات متروكة دلوقتي.</p>"}
+ ${rows.some(r=>r.done)?`<button class="sm gray" id="abclean" type="button">مسح اللي اتأكدت طلباتها (${rows.filter(r=>r.done).length})</button>`:""}</div>`;
+ document.querySelectorAll("#view [data-ab]").forEach(b=>b.onclick=async()=>{if(!confirm("حذف السجل ده؟"))return;const {error}=await sb.from("abandoned_checkouts").delete().eq("id",b.dataset.ab);if(error)return alert(error.message);V.abandoned()});
+ if($("abclean"))$("abclean").onclick=async()=>{const ids=rows.filter(r=>r.done).map(r=>r.id);const {error}=await sb.from("abandoned_checkouts").delete().in("id",ids);if(error)return alert(error.message);V.abandoned()};
 };
 
 /* ---------- categories ---------- */

@@ -110,6 +110,8 @@
       $("cg").onchange = () => { try { localStorage.setItem("gov", $("cg").value) } catch (e) {} refreshTotals() };
       renderPay();
       $("cback").onclick = () => { waMode = false; view("cart") }; $("ck").onsubmit = submit;
+      let abT = null; const abSave = () => { const ph = ($("cp").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""); if (!/^(20|0020|0)?1[0125]\d{8}$/.test(ph) || !cart.length) return; let k = sessionStorage.getItem("ckey"); if (!k) { k = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", k) } fetch(window.SUPABASE_URL + "/rest/v1/rpc/save_abandoned", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_key: k, p_name: ($("cn").value || "").trim(), p_phone: ph, p_governorate: $("cg").value || null, p_items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: unitOf(i) })), p_total: sub(), p_website: $("web") ? $("web").value : "" }), keepalive: true }).catch(() => {}) };
+      $("ck").addEventListener("input", () => { clearTimeout(abT); abT = setTimeout(abSave, 2500) }); $("ck").addEventListener("change", () => { clearTimeout(abT); abT = setTimeout(abSave, 800) });
       initCoupon();
     } else if (v === "done") { $("dtitle").textContent = "تم استلام طلبك" }
   }
