@@ -328,3 +328,5 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 #acclo{margin-top:14px;width:100%}.walrow{margin:8px 0}.walchk{display:flex!important;align-items:center;gap:8px;background:#fff7e6;border:1px solid #f3d9a4;border-radius:10px;padding:10px;color:#92400e!important;font-weight:700}.walchk input{width:auto!important}
 .acctabs button{color:#333}.acctabs button.on{color:#fff}
 @media(max-width:560px){.accbtn{padding:8px;margin-inline-start:2px}.accbtn span{display:none}header.top a.hl{padding:6px 10px;font-size:12px}}
+@media(max-width:759px){.trkfab{bottom:calc(68px + env(safe-area-inset-bottom))}.cw{bottom:calc(68px + env(safe-area-inset-bottom))}body:has(.stick) .trkfab{bottom:calc(132px + env(safe-area-inset-bottom))}body:has(.stick) .cw{bottom:calc(132px + env(safe-area-inset-bottom))}body{padding-bottom:calc(120px + env(safe-area-inset-bottom))}}
+#vbox{margin:8px 0}

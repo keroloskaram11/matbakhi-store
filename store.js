@@ -43,11 +43,11 @@
   try { const pa = document.querySelector(".pinfo [data-add],.stick [data-add]"); if (pa && window.StoreTrack) setTimeout(() => window.StoreTrack("ViewContent", { value: Number(pa.dataset.price), items: [{ id: pa.dataset.id, name: pa.dataset.name, price: Number(pa.dataset.price), qty: 1 }] }), 600) } catch (e) {}
 
   /* ---------- cart (prices shown here are for display; the server re-prices everything) ---------- */
-  let cart = [], waMode = false, coupon = null, couponOn = null, payId = "cod", proofPath = null;
+  let cart = [], waMode = false, coupon = null, voucher = null, couponOn = null, payId = "cod", proofPath = null;
   const methods = () => { try { const a = JSON.parse(S.payment_methods || "[]"); return Array.isArray(a) ? a.filter(m => m && (m.on === true || m.on === "1" || m.on === "true") && m.id && m.name && (m.kind === "cod" || String(m.detail || "").trim())) : [] } catch (e) { return [] } };
   const payKind = () => { const m = methods().find(x => x.id === payId); return m ? m.kind : "cod" };
-  const btnText = () => (payKind() === "cod" ? "تأكيد الطلب - الدفع عند الاستلام" : "تأكيد الطلب");
-  const totalNow0 = () => { const g = $("cg") ? $("cg").value : "", sh = shipFor(g); return sh == null ? null : sub() - couponDisc() + sh };
+  const btnText = () => (vAll() ? "تأكيد الطلب - مدفوع بالقسيمة" : payKind() === "cod" ? "تأكيد الطلب - الدفع عند الاستلام" : "تأكيد الطلب");
+  const totalNow0 = () => { const g = $("cg") ? $("cg").value : "", sh = shipFor(g); return sh == null ? null : sub() - couponDisc() + sh - vDisc(sh) };
   const totalNow = totalNow0; window.__mkTotal = () => totalNow0();
   try { cart = JSON.parse(localStorage.getItem("cart") || "[]").filter(i => i && i.id && i.qty > 0) } catch (e) {}
   const save = () => { coupon = null; try { localStorage.setItem("cart", JSON.stringify(cart)) } catch (e) {} };
@@ -143,11 +143,13 @@
     if (n) $("barbtn").onclick = open;
     if (!$("drawer").hidden && $("dtitle").dataset.v === "cart") view("cart");
   }
+  const vDisc = sh => (voucher && sh != null ? Math.min(voucher.value, sub() - couponDisc() + sh) : 0);
+  const vAll = () => { const g = $("cg") ? $("cg").value : "", sh = shipFor(g); return !!(voucher && sh != null && voucher.value >= sub() - couponDisc() + sh) };
   const couponDisc = () => (coupon ? Math.min(coupon.disc, sub()) : 0);
   function summary(g) {
-    const s = sub(), disc = couponDisc(), sh = shipFor(g), minZ = zones.length ? Math.min(...zones.map(z => +z.fee)) : 0, maxZ = zones.length ? Math.max(...zones.map(z => +z.fee)) : 0;
+    const s = sub(), disc = couponDisc(), sh = shipFor(g), vd = vDisc(sh), minZ = zones.length ? Math.min(...zones.map(z => +z.fee)) : 0, maxZ = zones.length ? Math.max(...zones.map(z => +z.fee)) : 0;
     const shTxt = sh === 0 ? "مجاني" : sh == null ? (zones.length ? `${fmt(minZ)}${maxZ !== minZ ? " - " + fmt(maxZ) : ""} جنيه (حسب المحافظة)` : "حسب المحافظة") : fmt(sh) + " جنيه";
-    return `<div class="sum"><div><span>المنتجات</span><b>${fmt(s)} جنيه</b></div><div><span>الشحن</span><b>${shTxt}</b></div>${disc ? `<div><span>${coupon.auto ? "خصم تلقائي" : "خصم الكوبون (" + esc(coupon.code) + ")"}</span><b>-${fmt(disc)} جنيه</b></div>` : ""}<div class="tot"><span>${payKind() === "cod" ? "الإجمالي (الدفع عند الاستلام)" : "الإجمالي المطلوب تحويله"}</span><b>${sh == null ? fmt(s - disc) + " + الشحن" : fmt(s - disc + sh) + " جنيه"}</b></div>${freeMin() > 0 && s < freeMin() ? `<small>أضف ${fmt(freeMin() - s)} جنيه للحصول على شحن مجاني</small>` : ""}</div>` }
+    return `<div class="sum"><div><span>المنتجات</span><b>${fmt(s)} جنيه</b></div><div><span>الشحن</span><b>${shTxt}</b></div>${disc ? `<div><span>${coupon.auto ? "خصم تلقائي" : "خصم الكوبون (" + esc(coupon.code) + ")"}</span><b>-${fmt(disc)} جنيه</b></div>` : ""}${vd ? `<div><span>قسيمة شراء (${esc(voucher.code)})</span><b>-${fmt(vd)} جنيه</b></div>` : ""}<div class="tot"><span>${vd && s - disc + sh - vd <= 0 ? "الإجمالي (مدفوع بالقسيمة)" : payKind() === "cod" ? "الإجمالي (الدفع عند الاستلام)" : "الإجمالي المطلوب تحويله"}</span><b>${sh == null ? fmt(s - disc) + " + الشحن" : fmt(s - disc + sh - vd) + " جنيه"}</b></div>${freeMin() > 0 && s < freeMin() ? `<small>أضف ${fmt(freeMin() - s)} جنيه للحصول على شحن مجاني</small>` : ""}</div>` }
   function waShort(no, name, phone, key) { return `طلب جديد رقم #${no}\nالاسم: ${name}\nالموبايل: ${phone}\nالفاتورة PDF: ${location.origin}/api/notify-order?k=${key}` }
   function waCart() { return "عايز أطلب:\n" + cart.map(i => `- ${i.name} × ${i.qty} (${fmt(unitOf(i))} جنيه)`).join("\n") + `\nالمنتجات: ${fmt(sub())} جنيه` }
   function nextTier(i) { const t = (i.tiers || []).filter(t => t[0] > i.qty && t[1] < unitOf(i)).sort((a, b) => a[0] - b[0])[0]; return t ? `<small class="tn">اطلب ${t[0]} قطعة بسعر ${fmt(t[1])} للقطعة</small>` : "" }
@@ -185,6 +187,7 @@
         <label>العنوان بالتفصيل (المنطقة، الشارع، رقم المبنى)</label><textarea id="ca" rows="3" required maxlength="400"></textarea>
         <label>ملاحظات (اختياري)</label><input id="cnote" maxlength="300">
         <div id="cpbox" hidden><label>كود الخصم (اختياري)</label><div class="cprow"><input id="cpin" dir="ltr" maxlength="30" autocomplete="off" autocapitalize="characters"><button type="button" class="btn gray" id="cpgo">تطبيق</button></div><p class="msg" id="cpmsg"></p></div>
+        <div id="vbox"><label>إضافة قسيمة شراء</label><div class="cprow"><input id="vin" dir="ltr" maxlength="30" autocomplete="off" autocapitalize="characters" placeholder="كود القسيمة"><button type="button" class="btn gray" id="vgo">تطبيق</button></div><p class="msg" id="vmsg"></p></div>
         <input id="web" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px" aria-hidden="true">
         <div id="paybox"></div><div id="csum">${summary("")}</div><p class="msg" id="cerr"></p>
         <button class="btn full" id="csub" type="submit">${btnText()}</button><button class="gray full btn" id="cback" type="button">رجوع للسلة</button></form>`;
@@ -194,8 +197,19 @@
       $("cback").onclick = () => { waMode = false; view("cart") }; $("ck").onsubmit = submit;
       let abT = null; const abSave = () => { const ph = ($("cp").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""); if (!/^(20|0020|0)?1[0125]\d{8}$/.test(ph) || !cart.length) return; let k = sessionStorage.getItem("ckey"); if (!k) { k = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", k) } fetch(window.SUPABASE_URL + "/rest/v1/rpc/save_abandoned", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_key: k, p_name: (($("cn").value || "") + " " + ($("cn2") ? $("cn2").value || "" : "")).trim(), p_phone: ph, p_governorate: $("cg").value || null, p_items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: unitOf(i) })), p_total: sub(), p_website: $("web") ? $("web").value : "" }), keepalive: true }).catch(() => {}) };
       $("ck").addEventListener("input", () => { clearTimeout(abT); abT = setTimeout(abSave, 2500) }); $("ck").addEventListener("change", () => { clearTimeout(abT); abT = setTimeout(abSave, 800) });
-      initCoupon();
+      initCoupon(); initVoucher();
     } else if (v === "done") { $("dtitle").textContent = "تم استلام طلبك" }
+  }
+  function initVoucher() {
+    const go = $("vgo"); if (!go) return; if (voucher) { $("vin").value = voucher.code; $("vmsg").className = "ok"; $("vmsg").textContent = "تم تطبيق القسيمة: " + fmt(voucher.value) + " جنيه" }
+    go.onclick = async () => {
+      const code = $("vin").value.trim().toUpperCase(), m = $("vmsg"); m.className = "msg"; m.textContent = "";
+      if (!code) { voucher = null; refreshTotals(); return }
+      go.disabled = true;
+      try { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/voucher_check", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_code: code, p_total: totalNow() || 0 }) }); const j = await r.json();
+        if (j && j.ok) { voucher = { code, value: Number(j.value) }; m.className = "ok"; m.textContent = "تم تطبيق القسيمة: " + fmt(j.value) + " جنيه" } else { voucher = null; m.textContent = (j && j.message) || "قسيمة الشراء غير صالحة" } }
+      catch (e) { voucher = null; m.textContent = "تعذر التحقق من القسيمة" }
+      go.disabled = false; refreshTotals() };
   }
   async function initCoupon() {
     try { if (couponOn === null) { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/coupons_active", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: "{}" }); couponOn = (await r.json()) === true } } catch (e) { couponOn = false }
@@ -212,9 +226,10 @@
       catch (e) { coupon = null; m.textContent = "تعذر التحقق من الكود" }
       $("cpgo").disabled = false; refreshTotals() };
   }
-  function refreshTotals() { $("csum").innerHTML = summary($("cg").value); const t = $("paytot"); if (t) { const v = totalNow(); t.textContent = v == null ? "إجمالي الطلب (اختر المحافظة الأول)" : fmt(v) + " جنيه" } }
+  function refreshTotals() { $("csum").innerHTML = summary($("cg").value); try { renderPay() } catch (e) {} const sb0 = $("csub"); if (sb0) sb0.textContent = btnText(); try { $("ck").dispatchEvent(new Event("change")) } catch (e) {} const t = $("paytot"); if (t) { const v = totalNow(); t.textContent = v == null ? "إجمالي الطلب (اختر المحافظة الأول)" : fmt(v) + " جنيه" } }
   function renderPay() {
     const ms = methods(), box = $("paybox"); if (!box) return;
+    if (vAll()) { box.innerHTML = '<p class="accm">قسيمة الشراء بتغطي الطلب كله، مفيش دفع إضافي.</p>'; return }
     if (!ms.length || (ms.length === 1 && ms[0].kind === "cod")) { box.innerHTML = ""; payId = ms.length ? ms[0].id : "cod"; return }
     if (!ms.some(m => m.id === payId)) payId = ms[0].id;
     const m = ms.find(x => x.id === payId), v = totalNow();
@@ -244,7 +259,7 @@
     if (!okPh(phone2)) return fail("اكتب رقم موبايل آخر صحيح (مثال 01001234567)"); if (!/^(\+?20|0020|0)?1[0125]\d{8}$/.test(phone.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "").replace(/^/, ""))) return fail("رقم الموبايل غير صحيح (مثال 01001234567)");
     if (!$("cg").value) return fail("اختر المحافظة"); if (addr.length < 8) return fail("اكتب العنوان بالتفصيل");
     let proof = null, ref = null;
-    const useWal = !!($("usewal") && $("usewal").checked && window.MKAuth && window.MKAuth.logged), walAll = useWal && totalNow() != null && window.MKAuth.balance >= totalNow();
+    const useWal = !!($("usewal") && $("usewal").checked && window.MKAuth && window.MKAuth.logged), walAll = (useWal && totalNow() != null && window.MKAuth.balance >= totalNow()) || vAll();
     if (payKind() !== "cod" && !walAll) {
       ref = ($("payref").value || "").trim(); const f = $("payfile").files[0];
       if (!f && !proofPath) return fail("لازم ترفع صورة التحويل (سكرين شوت) عشان نأكد الدفع");
@@ -255,12 +270,12 @@
     const snapshot = cart.map(i => ({ id: i.id, name: i.name, price: unitOf(i), qty: i.qty }));
     try {
       const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json", Authorization: "Bearer " + ((useWal && await window.MKAuth.token()) || window.SUPABASE_KEY) },
-        body: JSON.stringify({ p_use_wallet: useWal, p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length && !walAll ? payId : null, p_pay_ref: ref, p_pay_proof: proof, p_email: email, p_phone2: phone2 }) });
+        body: JSON.stringify({ p_use_wallet: useWal, p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_voucher: voucher ? voucher.code : null, p_pay_method: methods().length && !walAll ? payId : null, p_pay_ref: ref, p_pay_proof: proof, p_email: email, p_phone2: phone2 }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
-      const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
+      const okey = key; const wasWa = waMode; waMode = false; coupon = null; voucher = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
       try { sessionStorage.setItem("trk", phone) } catch (x) {}
-      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${Number(j.wallet_used) > 0 ? `<p>اتخصم <b>${fmt(j.wallet_used)} جنيه</b> من رصيد محفظتك${Number(j.remaining) > 0 ? `، والباقي <b>${fmt(j.remaining)} جنيه</b>` : ", والطلب اتدفع بالكامل"}.</p>` : ""}${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.remaining != null ? j.remaining : j.total)} جنيه</b>` : (Number(j.remaining) === 0 ? `الإجمالي: <b>${fmt(j.total)} جنيه</b> (مدفوع من المحفظة)` : `الإجمالي: <b>${fmt(j.total)} جنيه</b>${Number(j.wallet_used) > 0 ? `، المطلوب عند الاستلام <b>${fmt(j.remaining)} جنيه</b>` : " (الدفع عند الاستلام)"}`)}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
+      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${Number(j.wallet_used) > 0 ? `<p>اتخصم <b>${fmt(j.wallet_used)} جنيه</b> من رصيد محفظتك${Number(j.remaining) > 0 ? `، والباقي <b>${fmt(j.remaining)} جنيه</b>` : ", والطلب اتدفع بالكامل"}.</p>` : ""}${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.remaining != null ? j.remaining : j.total)} جنيه</b>` : (Number(j.remaining) === 0 ? `الإجمالي: <b>${fmt(j.total)} جنيه</b> (مدفوع من القسيمة / رصيد الحساب)` : `الإجمالي: <b>${fmt(j.total)} جنيه</b>${Number(j.wallet_used) > 0 ? `، المطلوب عند الاستلام <b>${fmt(j.remaining)} جنيه</b>` : " (الدفع عند الاستلام)"}`)}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }

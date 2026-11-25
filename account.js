@@ -36,10 +36,10 @@
 
   function authView(mode) {
     const su = mode === "signup";
-    body().innerHTML = `<h3>${su ? "إنشاء حساب" : "تسجيل الدخول"}</h3><div class="acctabs"><button type="button" data-m="login" class="${su ? "" : "on"}">دخول</button><button type="button" data-m="signup" class="${su ? "on" : ""}">حساب جديد</button></div>
+    body().innerHTML = `<h3>${su ? "إنشاء حساب" : "تسجيل الدخول"}</h3><div class="acctabs"><button type="button" data-m="login" class="${su ? "" : "on"}">دخول</button><button type="button" data-m="signup" class="${su ? "on" : ""}">إنشاء حساب</button></div>
 <form id="accf" novalidate>${su ? '<label>الاسم</label><input id="af_n" autocomplete="name" maxlength="60"><label>رقم الموبايل</label><input id="af_p" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX">' : ""}
 <label>الإيميل</label><input id="af_e" type="email" dir="ltr" autocomplete="email"><label>الباسورد</label><input id="af_w" type="password" dir="ltr" autocomplete="${su ? "new-password" : "current-password"}" minlength="6">
-<p class="accerr" id="af_err"></p><button class="btn big" id="af_s" type="submit">${su ? "إنشاء الحساب" : "دخول"}</button></form><p class="accm">${su ? "الحساب بيخليك تتابع طلباتك وتستخدم رصيد المحفظة. ولسه تقدر تشتري كزائر من غير حساب." : "تقدر تشتري كزائر من غير حساب."}</p>`;
+<p class="accerr" id="af_err"></p><button class="btn big" id="af_s" type="submit">${su ? "إنشاء الحساب" : "دخول"}</button></form><p class="accm">${su ? "الحساب بيخليك تتابع طلباتك وتستخدم رصيد الحساب / قسيمة الشراء. ولسه تقدر تشتري كزائر من غير حساب." : "تقدر تشتري كزائر من غير حساب."}</p>`;
     body().querySelectorAll(".acctabs button").forEach(b => b.onclick = () => authView(b.dataset.m));
     $("accf").onsubmit = async e => {
       e.preventDefault(); const err = $("af_err"), b = $("af_s"); err.textContent = "";
@@ -59,8 +59,8 @@
 
   async function account(tab) {
     const bal = wallet && wallet.ok ? Number(wallet.balance) || 0 : 0;
-    body().innerHTML = `<h3>أهلاً ${esc((prof && prof.full_name) || sess.user.email)}</h3><div class="accwal"><span>رصيد المحفظة</span><b>${fmt(bal)} جنيه</b></div>
-<div class="acctabs"><button type="button" data-t="orders" class="${tab === "orders" ? "on" : ""}">طلباتي</button><button type="button" data-t="wallet" class="${tab === "wallet" ? "on" : ""}">المحفظة</button><button type="button" data-t="data" class="${tab === "data" ? "on" : ""}">بياناتي</button></div><div id="acctab"></div><button type="button" class="btn gray" id="acclo">تسجيل الخروج</button>`;
+    body().innerHTML = `<h3>أهلاً ${esc((prof && prof.full_name) || sess.user.email)}</h3><div class="accwal"><span>رصيد الحساب / قسيمة الشراء</span><b>${fmt(bal)} جنيه</b></div>
+<div class="acctabs"><button type="button" data-t="orders" class="${tab === "orders" ? "on" : ""}">طلباتي</button><button type="button" data-t="wallet" class="${tab === "wallet" ? "on" : ""}">رصيدي</button><button type="button" data-t="data" class="${tab === "data" ? "on" : ""}">بياناتي</button></div><div id="acctab"></div><button type="button" class="btn gray" id="acclo">تسجيل الخروج</button>`;
     body().querySelectorAll(".acctabs button").forEach(b => b.onclick = () => account(b.dataset.t));
     $("acclo").onclick = () => { save(null); prof = wallet = null; draw(); close(); try { document.dispatchEvent(new Event("mk-auth")) } catch (x) {} };
     const t = $("acctab");
@@ -68,11 +68,11 @@
       t.innerHTML = '<p class="accm">جاري التحميل...</p>';
       try {
         const j = await rpc("my_orders"), o = (j && j.orders) || [];
-        t.innerHTML = o.length ? o.map(x => `<div class="accord"><div class="accrow"><b>طلب #${esc(x.order_no)}</b><span>${new Date(x.date).toLocaleDateString("ar-EG")}</span></div><div class="accrow"><span>${esc(x.status || "")}</span><b>${fmt(x.total)} جنيه</b></div>${Number(x.wallet_used) > 0 ? `<div class="accm">اتدفع من المحفظة: ${fmt(x.wallet_used)} جنيه</div>` : ""}<ul>${(x.items || []).map(i => `<li>${esc(i.name)} × ${esc(i.qty)}</li>`).join("")}</ul></div>`).join("") : '<p class="accm">لسه مفيش طلبات على حسابك.</p>';
+        t.innerHTML = o.length ? o.map(x => `<div class="accord"><div class="accrow"><b>طلب #${esc(x.order_no)}</b><span>${new Date(x.date).toLocaleDateString("ar-EG")}</span></div><div class="accrow"><span>${esc(x.status || "")}</span><b>${fmt(x.total)} جنيه</b></div>${Number(x.wallet_used) > 0 ? `<div class="accm">اتدفع من رصيد الحساب: ${fmt(x.wallet_used)} جنيه</div>` : ""}<ul>${(x.items || []).map(i => `<li>${esc(i.name)} × ${esc(i.qty)}</li>`).join("")}</ul></div>`).join("") : '<p class="accm">لسه مفيش طلبات على حسابك.</p>';
       } catch (e) { t.innerHTML = '<p class="accm">تعذر تحميل الطلبات.</p>' }
     } else if (tab === "wallet") {
       const l = (wallet && wallet.ledger) || [], K2 = { topup: "شحن رصيد", refund: "استرجاع", adjust: "تعديل", spend: "دفع طلب" };
-      t.innerHTML = '<p class="accm">رصيد المحفظة بيتشحن من المتجر، وتقدر تستخدمه في الدفع وقت الطلب.</p>' + (l.length ? l.map(x => `<div class="accrow led"><span>${K2[x.kind] || x.kind}${x.order_no ? " #" + esc(x.order_no) : ""}${x.note ? " - " + esc(x.note) : ""}<small>${new Date(x.at).toLocaleDateString("ar-EG")}</small></span><b class="${Number(x.amount) < 0 ? "neg" : "pos"}">${Number(x.amount) > 0 ? "+" : ""}${fmt(x.amount)}</b></div>`).join("") : '<p class="accm">مفيش حركات لسه.</p>');
+      t.innerHTML = '<p class="accm">رصيد الحساب / قسيمة الشراء بيتشحن من المتجر، وتقدر تستخدمه في الدفع وقت الطلب.</p>' + (l.length ? l.map(x => `<div class="accrow led"><span>${K2[x.kind] || x.kind}${x.order_no ? " #" + esc(x.order_no) : ""}${x.note ? " - " + esc(x.note) : ""}<small>${new Date(x.at).toLocaleDateString("ar-EG")}</small></span><b class="${Number(x.amount) < 0 ? "neg" : "pos"}">${Number(x.amount) > 0 ? "+" : ""}${fmt(x.amount)}</b></div>`).join("") : '<p class="accm">مفيش حركات لسه.</p>');
     } else {
       const p = prof || {};
       t.innerHTML = `<form id="accd" novalidate><label>الاسم</label><input id="ad_n" value="${esc(p.full_name)}" maxlength="80"><label>رقم الموبايل</label><input id="ad_p" type="tel" value="${esc(p.phone)}"><label>رقم موبايل تاني</label><input id="ad_p2" type="tel" value="${esc(p.phone2)}"><label>المحافظة</label><input id="ad_g" value="${esc(p.governorate)}" maxlength="40"><label>العنوان</label><textarea id="ad_a" rows="3" maxlength="400">${esc(p.address)}</textarea><label>الإيميل</label><input value="${esc(sess.user.email)}" disabled dir="ltr"><p class="accerr" id="ad_m"></p><button class="btn" type="submit">حفظ البيانات</button></form>`;
@@ -84,10 +84,10 @@
   const hook = async () => {
     const f = $("ck"); if (!f || f.dataset.acc) return; f.dataset.acc = "1";
     const sb = $("csub"), row = document.createElement("div"); row.className = "walrow";
-    if (!sess) { row.innerHTML = '<p class="accm">عندك حساب؟ <a href="#" id="walin">سجّل دخول</a> عشان تستخدم رصيد المحفظة وبياناتك تتملى لوحدها.</p>'; sb.parentNode.insertBefore(row, sb); const a = row.querySelector("#walin"); a.onclick = e => { e.preventDefault(); btn.click() }; return }
+    if (!sess) { row.innerHTML = '<p class="accm">عندك حساب؟ <a href="#" id="walin">سجّل دخول</a> عشان تستخدم رصيد الحساب / قسيمة الشراء وبياناتك تتملى لوحدها.</p>'; sb.parentNode.insertBefore(row, sb); const a = row.querySelector("#walin"); a.onclick = e => { e.preventDefault(); btn.click() }; return }
     await loadProfile(); const p = prof || {}, set = (id, v) => { const el = $(id); if (el && !el.value && v) el.value = v };
     const parts = String(p.full_name || "").split(" "); set("cn", parts[0]); set("cn2", parts.slice(1).join(" ")); set("cp", p.phone); set("cp2", p.phone2); set("cem", sess.user.email); set("ca", p.address); if ($("cg") && !$("cg").value && p.governorate) { try { $("cg").value = p.governorate } catch (x) {} }
-    const bal = window.MKAuth.balance; if (bal > 0) { row.innerHTML = `<label class="walchk"><input type="checkbox" id="usewal"> ادفع من رصيد المحفظة (متاح ${fmt(bal)} جنيه)</label><p class="accm" id="walnote"></p>`; sb.parentNode.insertBefore(row, sb); const upd = () => { const t = window.__mkTotal && window.__mkTotal(), n = $("walnote"); if (!n) return; if (!$("usewal").checked || t == null) { n.textContent = ""; return } n.textContent = bal >= t ? "الطلب كله هيتدفع من المحفظة." : "هيتخصم " + fmt(bal) + " جنيه من المحفظة والباقي " + fmt(t - bal) + " جنيه بطريقة الدفع المختارة." }; row.addEventListener("change", upd); f.addEventListener("change", upd) }
+    const bal = window.MKAuth.balance; if (bal > 0) { row.innerHTML = `<label class="walchk"><input type="checkbox" id="usewal"> ادفع من رصيد الحساب / قسيمة الشراء (متاح ${fmt(bal)} جنيه)</label><p class="accm" id="walnote"></p>`; sb.parentNode.insertBefore(row, sb); const upd = () => { const t = window.__mkTotal && window.__mkTotal(), n = $("walnote"); if (!n) return; if (!$("usewal").checked || t == null) { n.textContent = ""; return } n.textContent = bal >= t ? "الطلب كله هيتدفع من رصيد الحساب." : "هيتخصم " + fmt(bal) + " جنيه من رصيد الحساب والباقي " + fmt(t - bal) + " جنيه بطريقة الدفع المختارة." }; row.addEventListener("change", upd); f.addEventListener("change", upd) }
   };
   new MutationObserver(hook).observe(document.body, { childList: true, subtree: true }); hook();
   if (sess) token().then(t => { if (t) loadProfile() });
