@@ -9,8 +9,8 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["apps","التطبيقات"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
-const AREA={products:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet"};
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["apps","التطبيقات"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["payments","الدفع الأونلاين"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
+const AREA={products:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet",payments:"payment"};
 const AREAS=[["orders","الطلبات"],["abandoned","السلات المتروكة"],["products","المنتجات والأقسام"],["reviews","التقييمات"],["customers","العملاء"],["discounts","الخصومات والكوبونات"],["settings","الإعدادات (المتجر/الدومين)"],["reports","التقارير والتحليلات"],["apps","التطبيقات"],["payment","الدفع"],["shipping","الشحن"],["pages","الصفحات"],["wallet","المحفظة (القسائم والرصيد)"],["permissions","الموظفين والصلاحيات"]];
 let ME={owner:true,perms:{}};const lvl=a=>ME.owner?"full":(ME.perms[a]||"none");
 const V={};let tab="home";
@@ -25,6 +25,35 @@ async function login(){if(inviteMode){const em=$("em").value.trim(),pw=$("pw").v
 $("loginBtn").onclick=login;$("invT").onclick=()=>{inviteMode=!inviteMode;$("ic").style.display=inviteMode?"":"none";$("loginBtn").textContent=inviteMode?"تفعيل حساب الموظف":"دخول";$("invT").textContent=inviteMode?"رجوع للدخول العادي":"حساب موظف بكود دعوة"};$("pw").onkeydown=e=>{if(e.key==="Enter")login()};
 $("lo").onclick=async()=>{await sb.auth.signOut();location.reload()};
 $("menu").onclick=()=>document.body.classList.toggle("open");$("shade").onclick=()=>document.body.classList.remove("open");
+
+V.payments=async function(){const v=$("view");v.innerHTML='<div class="box skel"></div><div class="box skel"></div>';
+ const [c,st,pl]=await Promise.all([sb.rpc("pay_cfg_get"),sb.rpc("pay_secret_status"),sb.rpc("pay_list",{})]);
+ if(c.error)return v.innerHTML='<div class="box msg">'+esc(c.error.message)+'</div>';
+ const cf=c.data||{},ss=st.data||{},rows=pl.data||[],origin=location.origin;
+ const sec=(id,label)=>`<label>${label} ${ss[id]?'<span class="pill" style="background:#16a34a">محفوظ</span>':'<span class="pill" style="background:#6b7280">غير مضاف</span>'}</label><input type="password" autocomplete="off" id="ps_${id}" placeholder="${ss[id]?"اتركه فاضي لو مش عايز تغيّره":"الصق القيمة هنا"}">`;
+ const tg=(id,label,on)=>`<label class="tgl"><input type="checkbox" id="${id}" ${on?"checked":""}> ${label}</label>`;
+ const stc={paid:["مدفوع","#16a34a"],pending:["بانتظار","#d97706"],failed:["فشل","#dc2626"]};
+ v.innerHTML=`<div class="box"><h3>💳 Paymob (بطاقة / محفظة موبايل / valU / Apple Pay)</h3>
+ <p class="hint">أنشئ حسابك في Paymob بنفسك، وبعدين الصق المفاتيح هنا (بتتحفظ مشفّرة ومحدش بيشوفها تاني). التفعيل تلقائي بعد الحفظ.</p>
+ ${tg("pm_on","تفعيل Paymob",cf.paymob_enabled)}${tg("pm_sb","وضع تجريبي (Sandbox): استعمل مفاتيح Test وأرقام Integration الـ Test",cf.paymob_sandbox)}
+ <div class="row"><div><label>Integration ID للبطاقة</label><input id="pm_card" dir="ltr" value="${esc(cf.paymob_card_id||"")}"></div><div><label>Integration ID للمحفظة</label><input id="pm_wallet" dir="ltr" value="${esc(cf.paymob_wallet_id||"")}"></div></div>
+ <div class="row"><div><label>Integration ID لـ valU</label><input id="pm_valu" dir="ltr" value="${esc(cf.paymob_valu_id||"")}"></div><div><label>Integration ID لـ Apple Pay</label><input id="pm_ap" dir="ltr" value="${esc(cf.paymob_applepay_id||"")}"></div></div>
+ ${sec("paymob_secret_key","Secret Key")}${sec("paymob_public_key","Public Key")}${sec("paymob_hmac","HMAC Secret")}${sec("paymob_api_key","API Key (اختياري)")}
+ <p class="hint">رابط الإشعار (Webhook) بيتبعت تلقائي مع كل عملية: <span dir="ltr">${origin}/api/pay/paymob-webhook</span>. الوضع التجريبي في Paymob بيتحدد بنوع المفاتيح والـ Integration IDs (Test أو Live)، والتبديل بيتم هنا بتغيير القيم.</p></div>
+ <div class="box"><h3>💳 OPay</h3>${tg("op_on","تفعيل OPay",cf.opay_enabled)}${tg("op_sb","وضع تجريبي (Sandbox)",cf.opay_sandbox)}
+ <label>Merchant ID</label><input id="op_mid" dir="ltr" value="${esc(cf.opay_merchant_id||"")}">${sec("opay_public_key","Public Key")}${sec("opay_secret_key","Secret Key")}
+ <p class="hint">رابط الاستدعاء (Callback) بيتبعت تلقائي: <span dir="ltr">${origin}/api/pay/opay-callback</span></p></div>
+ <button id="paysave">حفظ إعدادات الدفع</button> <span id="paym"></span>
+ <p class="hint">طرق الدفع الأونلاين مش بتظهر للعملاء إلا لما تكون مفعّلة ومفاتيحها محفوظة. أي دفع أونلاين بيتأكد بس من إشعار موقّع من الشركة، ومفيش حاجة بتتعلّم مدفوعة بدون كده.</p>
+ <div class="box"><h3>عمليات الدفع الأونلاين</h3>${rows.length?rows.map(r=>`<div class="prow2"><div><b>${esc(r.provider==="paymob"?"Paymob":"OPay")}</b> - ${esc(r.method||"")} ${r.sandbox?'<span class="chip">تجريبي</span>':""}<br><small dir="ltr">${esc(dtm(r.created_at))} | ${esc(r.provider_txn||r.provider_ref||"")}</small></div><div><b>${fmt(r.amount)} جنيه</b> <span class="pill" style="background:${(stc[r.status]||stc.pending)[1]}">${(stc[r.status]||stc.pending)[0]}</span>${Number(r.refunded)>0?`<br><small>مردود: ${fmt(r.refunded)}</small>`:""}${r.status==="paid"&&Number(r.amount)-Number(r.refunded||0)>0?`<br><button class="sm red" data-rf="${esc(r.id)}" data-left="${Number(r.amount)-Number(r.refunded||0)}" type="button">رد مبلغ</button>`:""}</div></div>`).join(""):"<p>لا توجد عمليات بعد</p>"}</div>`;
+ const setS=async(id)=>{const val=$("ps_"+id).value.trim();if(!val)return;const {error}=await sb.rpc("pay_secret_set",{p_name:id,p_value:val});if(error)throw error};
+ $("paysave").onclick=async()=>{flash("paym","جاري الحفظ...",true);try{
+  const {error}=await sb.rpc("pay_cfg_save",{p:{paymob_enabled:$("pm_on").checked,paymob_sandbox:$("pm_sb").checked,paymob_card_id:$("pm_card").value,paymob_wallet_id:$("pm_wallet").value,paymob_valu_id:$("pm_valu").value,paymob_applepay_id:$("pm_ap").value,opay_enabled:$("op_on").checked,opay_sandbox:$("op_sb").checked,opay_merchant_id:$("op_mid").value}});if(error)throw error;
+  for(const id of ["paymob_secret_key","paymob_public_key","paymob_hmac","paymob_api_key","opay_public_key","opay_secret_key"])await setS(id);
+  toast("تم حفظ إعدادات الدفع");V.payments()}catch(e){flash("paym","خطأ: "+(e.message||e))}};
+ v.querySelectorAll("[data-rf]").forEach(b=>b.onclick=async()=>{const left=Number(b.dataset.left),a=Number(String(prompt("المبلغ المراد رده (جنيه). الحد الأقصى "+left+":",left)||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));if(!(a>0))return;if(!confirm("تأكيد رد "+a+" جنيه للعميل؟ العملية مش بترجع."))return;b.disabled=true;
+  try{const {data}=await sb.auth.getSession();const r=await fetch("/api/pay/refund",{method:"POST",headers:{Authorization:"Bearer "+data.session.access_token,"Content-Type":"application/json"},body:JSON.stringify({payment_id:b.dataset.rf,amount:a})});const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);toast("تم رد المبلغ");V.payments()}catch(e){alert(e.message);b.disabled=false}});
+};
 V.wallet=async function(){const v=$("view");v.innerHTML="جاري التحميل...";
  const [a,b,c]=await Promise.all([sb.rpc("admin_vouchers"),sb.rpc("admin_wallet_all"),sb.rpc("admin_accounts",{p_q:null})]);
  if(a.error){v.innerHTML='<div class="box msg">'+esc(a.error.message)+'</div>';return}
@@ -78,7 +107,7 @@ async function loadAll(){
 const newStatusId=()=>(D.statuses[0]||{}).id;
 const newOrders=()=>D.orders.filter(o=>o.status_id===newStatusId()).length;
 const newWh=()=>D.wholesale.filter(w=>w.status==="جديد").length;
-const IC={home:"🏠",products:"📦",cats:"🗂️",orders:"🧾",customers:"👥",abandoned:"🛒",reports:"📊",analytics:"📈",legal:"📄",apps:"🧩",look:"🎨",shipping:"🚚",coupons:"🏷️",wallet:"💳",settings:"⚙️",staff:"🔐"};
+const IC={home:"🏠",products:"📦",cats:"🗂️",orders:"🧾",customers:"👥",abandoned:"🛒",reports:"📊",analytics:"📈",legal:"📄",apps:"🧩",look:"🎨",shipping:"🚚",coupons:"🏷️",wallet:"💳",payments:"💰",settings:"⚙️",staff:"🔐"};
 function drawNav(){const bd={orders:newOrders()+newWh()};$("nav").innerHTML=NAV.filter(n=>!AREA[n[0]]||lvl(AREA[n[0]])!=="none").map(n=>`<button data-t="${n[0]}" class="${n[0]===tab?"on":""}"><span class="ni">${IC[n[0]]||"•"}</span><span class="nt">${n[1]}</span>${bd[n[0]]?`<span class="bd">${bd[n[0]]}</span>`:""}</button>`).join("");$("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.t))}
 function go(t){if(AREA[t]&&lvl(AREA[t])==="none"){t="home"}tab=t;if(t==="look")lookSub=null;location.hash=t;document.body.classList.remove("open");$("ptitle").textContent=NAV.find(n=>n[0]===t)[1];drawNav();V[t]();if(AREA[t]&&lvl(AREA[t])==="read"){$("view").insertAdjacentHTML("afterbegin","<div class=\"box msg\" style=\"background:#fff7e0\">🔒 صلاحيتك هنا: قراءة فقط. أي تعديل هيترفض.</div>")}scrollTo(0,0)}
 async function upload(file,prefix){const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-zA-Z0-9]/g,"").slice(0,5)||"jpg";const path=(prefix?prefix+"/":"")+Date.now()+"-"+Math.random().toString(36).slice(2,8)+"."+ext;
