@@ -66,6 +66,7 @@ export const onRequestPost = async ({ request, env }) => {
   });
   if (!pr.ok) return new Response("pdf failed " + pr.status + " " + (await pr.text()).slice(0, 300), { status: 502 });
   const pdf = await pr.arrayBuffer();
+  if (request.headers.get("x-preview") === "1") return new Response(pdf, { headers: { "content-type": "application/pdf" } });
   const fd = new FormData();
   fd.append("chat_id", env.TG_CHAT_ID);
   fd.append("caption", `🧾 فاتورة الطلب #${o.order_no} جاهزة لإرسالها للعميل`);
