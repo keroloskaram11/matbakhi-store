@@ -89,16 +89,63 @@ const socialHtml = S => {
 };
 const sameAs = S => SOCIAL.map(x => S[x[0]]).filter(u => /^https:\/\//.test(u || ""));
 const imagesOf = p => { let a = Array.isArray(p.images) ? p.images : []; a = a.filter(u => /^https?:\/\//i.test(u || "")); if (!a.length && /^https?:\/\//i.test(p.image_url || "")) a = [p.image_url]; return a.slice(0, 12) };
+// Hero slider (setting hero_slides = JSON list, hero_interval = seconds each slide stays). Returns "" when there are no valid slides.
+const heroSlides = S => {
+  let a = []; try { a = JSON.parse(S.hero_slides || "[]") } catch (e) {}
+  if (!Array.isArray(a)) return [];
+  const okLink = u => /^(\/(?!\/)|https:\/\/)/.test(String(u || "")) && String(u).length < 300;
+  return a.map(x => ({ img: safeUrl(x && x.img) && /^https:/i.test(x.img) ? x.img : "", img2: safeUrl(x && x.img2) && /^https:/i.test(x.img2) ? x.img2 : "", alt: String((x && x.alt) || "").slice(0, 120),
+    btns: (Array.isArray(x && x.btns) ? x.btns : []).filter(b => b && String(b.text || "").trim() && okLink(b.link)).slice(0, 2).map(b => ({ text: String(b.text).trim().slice(0, 40), link: String(b.link) })) }))
+    .filter(x => x.img).slice(0, 8);
+};
+const heroSliderHtml = (S, name) => {
+  const sl = heroSlides(S); if (!sl.length) return "";
+  const ms = Math.min(10, Math.max(1, Number(S.hero_interval) || 2)) * 1000;
+  return `<section class="hs" data-hs data-ms="${ms}" aria-roledescription="carousel" aria-label="العروض"><h1 class="sr-only">${esc(S.hero_title || name)}</h1><div class="hs-track">${sl.map((x, i) => `<div class="hs-slide${i ? "" : " on"}" role="group" aria-label="${i + 1} / ${sl.length}">${x.img2 ? `<picture><source media="(min-width:760px)" srcset="${esc(x.img2)}">` : ""}<img src="${esc(x.img)}" alt="${esc(x.alt || name)}" width="1080" height="1080" ${i ? 'loading="lazy" decoding="async"' : 'fetchpriority="high"'}>${x.img2 ? "</picture>" : ""}${x.btns.length ? `<div class="hs-btns">${x.btns.map((b, j) => `<a class="hs-btn${j ? " b2" : ""}" href="${esc(b.link)}"${/^https:/.test(b.link) ? ' rel="noopener" target="_blank"' : ""}>${esc(b.text)}</a>`).join("")}</div>` : ""}</div>`).join("")}</div>${sl.length > 1 ? `<div class="hs-dots">${sl.map((x, i) => `<button type="button" aria-label="الشريحة ${i + 1}" class="${i ? "" : "on"}"></button>`).join("")}</div>` : ""}</section>`;
+};
+const tickerHtml = S => {
+  if (S.ticker_on !== "1") return "";
+  let a = []; try { a = JSON.parse(S.ticker_items || "[]") } catch (e) {}
+  a = (Array.isArray(a) ? a : []).map(x => String(x || "").trim().slice(0, 140)).filter(Boolean).slice(0, 12);
+  if (!a.length) return "";
+  const col = v => (/^#[0-9a-fA-F]{6}$/.test(v || "") ? v : "");
+  const pps = { 1: 30, 2: 55, 3: 90 }[String(S.ticker_speed)] || 55;
+  const one = a.map(t => `<span class="tk-i">${esc(t)}</span>`).join("");
+  const secs = Math.max(8, Math.round(a.join("").length * 9 / pps * 3) / 3 + a.length * 60 / pps);
+  const st = [col(S.ticker_bg) && `--tkbg:${col(S.ticker_bg)}`, col(S.ticker_fg) && `--tkfg:${col(S.ticker_fg)}`, `--tks:${secs.toFixed(1)}s`].filter(Boolean).join(";");
+  return `<div class="tk" style="${st}" role="region" aria-label="إعلانات"><div class="tk-t"><div class="tk-g">${one}</div><div class="tk-g" aria-hidden="true">${one}</div></div></div>`;
+};
+const INTRO_DEFAULT = "متخصصون في توفير جميع أدوات ورفايع المطبخ العصرية بأسعار الجملة الحقيقية من أول قطعة، نجمع لك بين الجودة والخامات والتوفير العالي بدون حد أدنى للشراء.";
+const introHtml = S => {
+  if (S.intro_on === "0") return "";
+  const t = String(S.intro_text === undefined ? INTRO_DEFAULT : S.intro_text).trim().slice(0, 400);
+  return t ? `<section class="intro" aria-label="نبذة"><span class="ib b1"></span><span class="ib b2"></span><span class="ib b3"></span><p>${esc(t)}</p></section>` : "";
+};
+const reviewsHtml = S => {
+  let a = []; try { a = JSON.parse(S.reviews || "[]") } catch (e) {}
+  a = (Array.isArray(a) ? a : []).map(x => ({ img: safeUrl(x && x.img) && /^https:/i.test(x.img) ? x.img : "", name: String((x && x.name) || "").trim().slice(0, 60), text: String((x && x.text) || "").trim().slice(0, 500) })).filter(x => x.img || x.text).slice(0, 20);
+  if (!a.length) return "";
+  const title = String(S.reviews_title === undefined ? "آراء عملائنا" : S.reviews_title).trim().slice(0, 80);
+  return `<section class="rv">${title ? `<h2 class="sec">${esc(title)}</h2>` : ""}<div class="rv-row" tabindex="0">${a.map((x, i) => `<figure class="rv-c${x.img ? " withimg" : ""}">${x.img ? `<a href="${esc(x.img)}" target="_blank" rel="noopener"><img src="${esc(x.img)}" alt="${esc(x.name ? "رأي " + x.name : "رأي عميل")}" loading="lazy" decoding="async" width="300" height="400"></a>` : ""}${x.text ? `<blockquote>${esc(x.text)}</blockquote>` : ""}${x.name ? `<figcaption>${esc(x.name)}</figcaption>` : ""}</figure>`).join("")}</div></section>`;
+};
 const descHtml = d => sanitizeHtml(d);
 function layout({ req, S, cats, zonesList, title, desc, path, og = {}, ld = [], body, robots, prev, next, currentCat }) {
   const b = baseUrl(req, S), name = S.store_name || "المتجر";
   const canonical = b + path;
   const color = /^#[0-9a-fA-F]{6}$/.test(S.primary_color || "") ? S.primary_color : "#7a3e1d";
   const accent = /^#[0-9a-fA-F]{6}$/.test(S.accent_color || "") ? S.accent_color : "#25a244";
-  const logo = safeUrl(S.logo_url), ogImg = safeUrl(og.image) || safeUrl(S.hero_image_url) || logo;
+  const FONTS = { "Cairo": "Cairo:wght@400;600;700", "Tajawal": "Tajawal:wght@400;500;700", "Almarai": "Almarai:wght@400;700;800", "IBM Plex Sans Arabic": "IBM+Plex+Sans+Arabic:wght@400;500;700", "Noto Kufi Arabic": "Noto+Kufi+Arabic:wght@400;600;700", "Changa": "Changa:wght@400;600;700" };
+  const font = FONTS[S.font_family] ? S.font_family : "Cairo";
+  const bgc = /^#[0-9a-fA-F]{6}$/.test(S.bg_color || "") ? S.bg_color : "";
+  const logoPx = { s: 32, m: 40, l: 56 }[S.logo_size] || 40;
+  const bodyCls = [S.product_cols_mobile === "1" ? "pc1" : "", S.card_img === "tall" ? "cimg-tall" : "", S.card_badge === "0" ? "nobadge" : "", S.card_tier === "0" ? "notier" : "", S.card_radius === "l" ? "cr-l" : S.card_radius === "s" ? "cr-s" : ""].filter(Boolean).join(" ");
+  const logo = safeUrl(S.logo_url), favicon = safeUrl(S.favicon_url) || logo, ogImg = safeUrl(og.image) || safeUrl(S.hero_image_url) || logo;
   const publicS = {}; const zs = zonesList || []; ["store_name", "whatsapp", "meta_pixel_id", "tiktok_pixel_id", "ga_id", "shipping_fee", "free_shipping_min", "primary_color", "accent_color"].forEach(k => (publicS[k] = S[k] || ""));
   const menuCats = (cats || []).filter(c => c.show_menu !== false), footCats = (cats || []).filter(c => c.show_footer === true);
-  const chips = (cats || []).length ? `<nav class="cats" aria-label="الأقسام"><a class="chip ${currentCat === "" ? "on" : ""}" href="/products">كل المنتجات</a>${menuCats.map(c => `<a class="chip ${currentCat === c.slug ? "on" : ""}" href="/c/${esc(encodeURIComponent(c.slug))}">${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="" width="22" height="22" loading="lazy">` : ""}${esc(c.name)}</a>`).join("")}</nav>` : "";
+  let navx = []; try { navx = JSON.parse(S.nav_extra || "[]") } catch (e) {}
+  navx = (Array.isArray(navx) ? navx : []).filter(x => x && String(x.text || "").trim() && /^(\/(?!\/)|https:\/\/)/.test(String(x.link || ""))).slice(0, 8);
+  const extraChips = navx.map(x => `<a class="chip" href="${esc(x.link)}">${esc(String(x.text).trim().slice(0, 30))}</a>`).join("");
+  const chips = S.nav_chips === "0" ? "" : (cats || []).length || extraChips ? `<nav class="cats" aria-label="الأقسام"><a class="chip ${currentCat === "" ? "on" : ""}" href="/products">كل المنتجات</a>${menuCats.map(c => `<a class="chip ${currentCat === c.slug ? "on" : ""}" href="/c/${esc(encodeURIComponent(c.slug))}">${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="" width="22" height="22" loading="lazy">` : ""}${esc(c.name)}</a>`).join("")}${extraChips}</nav>` : "";
   return `<!DOCTYPE html><html lang="ar-EG" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
@@ -111,14 +158,14 @@ ${prev ? `<link rel="prev" href="${esc(b + prev)}">` : ""}${next ? `<link rel="n
 <meta property="og:title" content="${esc(og.title || title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${esc(canonical)}">
 ${ogImg ? `<meta property="og:image" content="${esc(ogImg)}">` : ""}
 <meta name="twitter:card" content="${ogImg ? "summary_large_image" : "summary"}"><meta name="twitter:title" content="${esc(og.title || title)}"><meta name="twitter:description" content="${esc(desc)}">
-${logo ? `<link rel="icon" href="${esc(logo)}">` : ""}
+${favicon ? `<link rel="icon" href="${esc(favicon)}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${FONTS[font]}&display=swap">
 <link rel="stylesheet" href="/style.css">
-<style>:root{--primary:${color};--accent:${accent}}</style>
+<style>:root{--primary:${color};--accent:${accent};--font:'${font}';--logo:${logoPx}px${bgc ? `;--bg:${bgc}` : ""}}</style>
 ${ld.map(jsonLd).join("\n")}
-</head><body>
-<header class="top"><a class="brand" href="/">${logo ? `<img src="${esc(logo)}" alt="${esc(name)}" width="40" height="40">` : ""}<span class="name">${esc(name)}</span></a><a class="hl" href="/wholesale">طلب جملة</a><button class="cartbtn" id="cartBtn" aria-label="السلة"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 7H6"/></svg><span id="cartCount" class="cnt">0</span></button></header>
+</head><body${bodyCls ? ` class="${bodyCls}"` : ""}>
+${tickerHtml(S)}<header class="top"><a class="brand" href="/">${logo ? `<img src="${esc(logo)}" alt="${esc(name)}" width="40" height="40">` : ""}<span class="name">${esc(name)}</span></a>${S.nav_wholesale === "0" ? "" : `<a class="hl" href="/wholesale">طلب جملة</a>`}<button class="cartbtn" id="cartBtn" aria-label="السلة"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 7H6"/></svg><span id="cartCount" class="cnt">0</span></button></header>
 ${body.afterHeader || ""}
 ${body.hero || ""}
 <main class="wrap"><form class="search" id="sf" action="/" role="search" autocomplete="off"><input id="q" name="q" type="search" placeholder="ابحث عن منتج..." aria-label="بحث" enterkeyhint="search"><div id="sug" class="sug" hidden></div></form>${chips}${body.main}</main>
@@ -151,4 +198,4 @@ function fail(e) { console.error(e); return send(`<!DOCTYPE html><html lang="ar"
 function notFound(req, S, cats, what) {
   return send( layout({ req, S, cats, title: "الصفحة غير موجودة | " + (S.store_name || ""), desc: "الصفحة غير موجودة", path: new URL(req.url).pathname, robots: "noindex", body: { main: `<div class="empty"><h1>${esc(what)} غير موجود</h1><p><a class="btn" href="/">الرجوع للرئيسية</a></p></div>` } }), "public, s-maxage=60", null, 404);
 }
-export { imagesOf, descHtml, toText, socialHtml, params, zones, tiersFor, cardsHtml, trustHtml, rest, settings, categories, PCOLS, esc, fmt, safeUrl, baseUrl, pUrl, cUrl, price, isSale, card, layout, send, orgLd, crumbLd, crumbHtml, cut, fail, notFound, dec, jsonLd, SUPABASE_URL };
+export { introHtml, reviewsHtml, heroSliderHtml, tickerHtml, imagesOf, descHtml, toText, socialHtml, params, zones, tiersFor, cardsHtml, trustHtml, rest, settings, categories, PCOLS, esc, fmt, safeUrl, baseUrl, pUrl, cUrl, price, isSale, card, layout, send, orgLd, crumbLd, crumbHtml, cut, fail, notFound, dec, jsonLd, SUPABASE_URL };
