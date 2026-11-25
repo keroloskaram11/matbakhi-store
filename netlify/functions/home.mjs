@@ -16,6 +16,7 @@ export default async (req, context) => {
     const hero = slider || `<section class="hero ${hi ? "img" : ""}" ${hi ? `style="background-image:url('${L.esc(hi.replace(/'/g, "%27"))}')"` : ""}><h1>${L.esc(S.hero_title || name)}</h1><p>${L.esc(S.hero_subtitle || "")}</p>${cta}</section>`;
     let layoutCfg = DEFAULT; try { const j = JSON.parse(S.home_layout || ""); if (Array.isArray(j) && j.length) layoutCfg = j } catch (e) {}
     ["catsecs", "reviews", "intro"].forEach(k => { if (!layoutCfg.some(x => x.k === k)) layoutCfg = [{ k, on: true }, ...layoutCfg] });
+    if (!layoutCfg.some(x => x.k === "track")) { const ti = layoutCfg.findIndex(x => x.k === "trust"); layoutCfg = [...layoutCfg.slice(0, ti >= 0 ? ti + 1 : 1), { k: "track", on: true }, ...layoutCfg.slice(ti >= 0 ? ti + 1 : 1)]; }
     let cs = []; try { cs = JSON.parse(S.home_cat_sections || "[]") } catch (e) {}
     cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
     const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
@@ -25,6 +26,7 @@ export default async (req, context) => {
       reviews: () => L.reviewsHtml(S),
       catsecs: () => cs.map((x, i) => csData[i].length ? `<section class="csec"><div class="csec-h"><h2 class="sec">${L.esc(x.c.name)}</h2><a class="csec-m" href="/c/${L.esc(encodeURIComponent(x.c.slug))}">عرض الكل</a></div><div class="grid">${L.cardsHtml(csData[i], csTm)}</div></section>` : "").join(""),
       trust: () => L.trustHtml(S),
+      track: () => `<section class="trkbox"><h2 class="sec">تتبع طلبك</h2><p class="lead">اكتب رقم الطلب ورقم الموبايل اللي سجلت بيه وشوف حالة طلبك والدفع.</p><form id="hform" class="box formbox" novalidate><div class="row"><input id="hno" inputmode="numeric" maxlength="10" placeholder="رقم الطلب" autocomplete="off" aria-label="رقم الطلب" required><input id="hph" type="tel" inputmode="tel" placeholder="رقم الموبايل 01XXXXXXXXX" autocomplete="tel" aria-label="رقم الموبايل" required></div><p class="msg" id="herr"></p><button class="btn full" type="submit">تتبع الطلب</button></form></section>`,
       categories: () => homeCats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${homeCats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "",
       featured: () => featured.length ? `<section><h2 class="sec">منتجات مميزة</h2><div class="grid">${L.cardsHtml(featured, tm)}</div></section>` : "",
       latest: () => `<section><h2 class="sec">أحدث المنتجات</h2><div class="grid">${L.cardsHtml(latest, tm)}</div><p style="text-align:center"><a class="btn gray" href="/products">عرض كل المنتجات</a></p></section>`,

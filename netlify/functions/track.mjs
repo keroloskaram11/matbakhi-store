@@ -6,7 +6,7 @@ export default async (req, context) => {
     const [S, cats, Z] = await Promise.all([L.settings(), L.categories(), L.zones()]);
     const name = S.store_name || "المتجر", wa = String(S.whatsapp || "").replace(/\D/g, "");
     const main = `${L.crumbHtml([["الرئيسية", "/"], ["تتبع الطلب", "/track"]])}<h1 class="sec">تتبع طلبك</h1>
-<p class="lead">اكتب رقم الطلب ورقم الموبايل اللي سجلت بيه الطلب وهتعرف حالته.</p>
+<p class="lead">اكتب رقم الطلب ورقم الموبايل اللي سجلت بيه الطلب وهتعرف حالته وتفاصيله وحالة الدفع.</p><p class="muted">بنطلب رقم الموبايل جنب رقم الطلب عشان نحمي خصوصيتك: أرقام الطلبات متتالية وأي حد يقدر يخمنها، فمحدش يشوف طلبك غير اللي يعرف رقم موبايلك المسجل.</p>
 <form id="tf" class="box formbox" novalidate><label>رقم الطلب</label><input id="tno" inputmode="numeric" maxlength="10" placeholder="مثال 125" autocomplete="off" required>
 <label>رقم الموبايل</label><input id="tph" type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel" required>
 <p class="msg" id="terr"></p><button class="btn full" id="tsub" type="submit">عرض حالة الطلب</button></form>
@@ -26,10 +26,12 @@ $("tf").onsubmit=function(e){e.preventDefault();var err=$("terr"),res=$("tres"),
  fetch(window.SUPABASE_URL+"/rest/v1/rpc/track_order",{method:"POST",headers:{apikey:window.SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({p_order_no:Number(no),p_phone:ph})})
  .then(function(r){return r.json()}).then(function(j){b.disabled=false;b.textContent="عرض حالة الطلب";
   if(!j||!j.ok){err.textContent=(j&&j.message&&/[\\u0600-\\u06FF]/.test(j.message))?j.message:"تعذر عرض الطلب، حاول تاني";return}
-  var PAY={pending:"الدفع: بانتظار تأكيد الدفع",paid:"الدفع: تم تأكيد الدفع"};var cancelled=j.status==="ملغي",step=0;STEPS.forEach(function(s,i){if(s[0]===j.status||(j.status==="تم التحصيل"&&i===3))step=i});
-  var html='<h3>طلب رقم #'+Number(no)+'</h3><p class="muted">تاريخ الطلب: '+dmy(j.created_at)+'</p><p><b>'+(MSG[j.status]||j.status)+'</b></p>'+(PAY[j.pay]?'<p class="muted">'+PAY[j.pay]+(j.method?' ('+String(j.method).replace(/[<>&]/g,'')+')':'')+'</p>':'');
+  var PAY={pending:"بانتظار تأكيد الدفع",paid:"تم تأكيد الدفع",cod:"الدفع عند الاستلام"};function E(x){return String(x).replace(/[<>&"]/g,function(c){return{"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]})}var cancelled=j.status==="ملغي",step=0;STEPS.forEach(function(s,i){if(s[0]===j.status||(j.status==="تم التحصيل"&&i===3))step=i});
+  var html='<h3>طلب رقم #'+Number(no)+'</h3><p class="muted">تاريخ الطلب: '+dmy(j.created_at)+'</p><p><b>'+(MSG[j.status]||j.status)+'</b></p>'+'<p class="muted"><b>الدفع:</b> '+(j.pay==="pending"||j.pay==="paid"?E(j.method||"تحويل")+' - '+PAY[j.pay]:PAY.cod)+'</p>';
+  var it=(j.items||[]);if(it.length)html+='<h4>تفاصيل الطلب</h4><ul class="titems">'+it.map(function(x){return '<li><span>'+E(x.n)+(Number(x.p)>=0?' &times; '+Number(x.q):'')+'</span><b>'+Number(x.p*x.q).toLocaleString("en-US")+' جنيه</b></li>'}).join("")+'</ul><p><b>الإجمالي شامل الشحن: '+Number(j.total||0).toLocaleString("en-US")+' جنيه</b></p>';
   if(!cancelled)html+='<ol class="trk">'+STEPS.map(function(s,i){return '<li class="'+(i<=step?"on":"")+'"><span>'+(i<=step?"&#10003;":i+1)+'</span>'+s[1]+'</li>'}).join("")+'</ol>';
   res.innerHTML=html;res.hidden=false}).catch(function(){b.disabled=false;b.textContent="عرض حالة الطلب";err.textContent="تعذر الاتصال، حاول تاني"})};
+try{var q=JSON.parse(sessionStorage.getItem("trk")||"null");sessionStorage.removeItem("trk");if(q&&q.no&&q.ph){$("tno").value=q.no;$("tph").value=q.ph;$("tf").dispatchEvent(new Event("submit",{cancelable:true}))}}catch(x){}
 })();</script>`;
     return L.send(L.layout({ req, S, cats, zonesList: Z, title: `تتبع طلبك | ${name}`, desc: L.cut(`تابع حالة طلبك من ${name} برقم الطلب ورقم الموبايل.`, 160), path: "/track", robots: "noindex,follow", body: { main } }));
   } catch (e) { return L.fail(e) }
