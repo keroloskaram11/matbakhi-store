@@ -1,5 +1,5 @@
 import * as L from "../lib/lib.mjs";
-const DEFAULT = [{ k: "trust", on: true }, { k: "categories", on: true }, { k: "featured", on: true }, { k: "latest", on: true }, { k: "about", on: true }];
+const DEFAULT = [{ k: "intro", on: true }, { k: "reviews", on: true }, { k: "catsecs", on: true }, { k: "trust", on: true }, { k: "categories", on: true }, { k: "featured", on: true }, { k: "latest", on: true }, { k: "about", on: true }];
 export default async (req, context) => {
   try {
     const [S, cats, Z, latest, featured] = await Promise.all([L.settings(), L.categories(), L.zones(),
@@ -12,9 +12,18 @@ export default async (req, context) => {
     const desc = L.cut(S.seo_description || S.tagline || name, 160);
     const hi = L.safeUrl(S.hero_image_url);
     const cta = /^(\/|https?:\/\/)/.test(S.hero_cta_link || "") && S.hero_cta_text ? `<a class="btn heroBtn" href="${L.esc(S.hero_cta_link)}">${L.esc(S.hero_cta_text)}</a>` : "";
-    const hero = `<section class="hero ${hi ? "img" : ""}" ${hi ? `style="background-image:url('${L.esc(hi.replace(/'/g, "%27"))}')"` : ""}><h1>${L.esc(S.hero_title || name)}</h1><p>${L.esc(S.hero_subtitle || "")}</p>${cta}</section>`;
+    const slider = L.heroSliderHtml(S, name);
+    const hero = slider || `<section class="hero ${hi ? "img" : ""}" ${hi ? `style="background-image:url('${L.esc(hi.replace(/'/g, "%27"))}')"` : ""}><h1>${L.esc(S.hero_title || name)}</h1><p>${L.esc(S.hero_subtitle || "")}</p>${cta}</section>`;
     let layoutCfg = DEFAULT; try { const j = JSON.parse(S.home_layout || ""); if (Array.isArray(j) && j.length) layoutCfg = j } catch (e) {}
+    ["catsecs", "reviews", "intro"].forEach(k => { if (!layoutCfg.some(x => x.k === k)) layoutCfg = [{ k, on: true }, ...layoutCfg] });
+    let cs = []; try { cs = JSON.parse(S.home_cat_sections || "[]") } catch (e) {}
+    cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
+    const csData = await Promise.all(cs.map(x => L.rest(`products?select=${L.PCOLS}&active=eq.true&category_id=eq.${encodeURIComponent(x.c.id)}&order=created_at.desc&limit=${x.n}`).catch(() => [])));
+    const csTm = await L.tiersFor(csData.flat().filter((p, i, a) => a.findIndex(y => y.id === p.id) === i));
     const sec = {
+      intro: () => L.introHtml(S),
+      reviews: () => L.reviewsHtml(S),
+      catsecs: () => cs.map((x, i) => csData[i].length ? `<section class="csec"><div class="csec-h"><h2 class="sec">${L.esc(x.c.name)}</h2><a class="csec-m" href="/c/${L.esc(encodeURIComponent(x.c.slug))}">عرض الكل</a></div><div class="grid">${L.cardsHtml(csData[i], csTm)}</div></section>` : "").join(""),
       trust: () => L.trustHtml(S),
       categories: () => homeCats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${homeCats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "",
       featured: () => featured.length ? `<section><h2 class="sec">منتجات مميزة</h2><div class="grid">${L.cardsHtml(featured, tm)}</div></section>` : "",
