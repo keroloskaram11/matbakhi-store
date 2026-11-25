@@ -6,6 +6,8 @@ const TAGS = {
   table: [], thead: [], tbody: [], tr: [], td: ["colspan", "rowspan"], th: ["colspan", "rowspan"],
   a: ["href", "title"], img: ["src", "alt", "width", "height"]
 };
+// class names that may be used (they only style the description; their CSS lives in style.css under .rich)
+const CLASSES = new Set(["ecom-wrapper","hero-card","benefits-grid","benefit-box","benefit-icon","benefit-title","benefit-sub","specs-table","specs-label","specs-value","trust-banner","trust-highlight"]);
 const VOID = { br: 1, hr: 1, img: 1 };
 const DROP = /<(script|style|iframe|object|embed|svg|math|form|textarea|select|noscript|template|title|head|button|video|audio|canvas|link|meta|base)\b[\s\S]*?(?:<\/\1\s*>|$)/gi;
 const STYLE_OK = /^(color|background|background-color|text-align|font-size|font-weight|font-style|line-height|padding(-top|-bottom|-left|-right)?|margin(-top|-bottom|-left|-right)?|border(-top|-bottom|-left|-right)?|border-radius|border-color|border-width|border-style|width|max-width|text-decoration|direction|letter-spacing)$/;
@@ -50,6 +52,7 @@ export function sanitizeHtml(input) {
     const seen = {};
     while ((a = ar.exec(m[3]))) {
       const k = a[1].toLowerCase(), v = a[2] ?? a[3] ?? a[4] ?? ""; if (seen[k]) continue; seen[k] = 1;
+      if (k === "class") { const c = decodeEnt(v).split(/\s+/).filter(x => CLASSES.has(x)).join(" "); if (c) attrs += ` class="${c}"`; continue }
       if (k === "style") { const c = cleanStyle(v); if (c) attrs += ` style="${esc(c)}"`; continue }
       if (!TAGS[tag].includes(k)) continue;
       if (k === "href") { const u = cleanUrl(v, false); if (u) { attrs += ` href="${esc(u)}"`; ext = /^https?:/i.test(u) } continue }
