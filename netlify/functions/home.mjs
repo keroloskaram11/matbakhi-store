@@ -16,6 +16,7 @@ export default async (req, context) => {
     const hero = slider || `<section class="hero ${hi ? "img" : ""}" ${hi ? `style="background-image:url('${L.esc(hi.replace(/'/g, "%27"))}')"` : ""}><h1>${L.esc(S.hero_title || name)}</h1><p>${L.esc(S.hero_subtitle || "")}</p>${cta}</section>`;
     let layoutCfg = DEFAULT; try { const j = JSON.parse(S.home_layout || ""); if (Array.isArray(j) && j.length) layoutCfg = j } catch (e) {}
     ["catsecs", "reviews", "intro"].forEach(k => { if (!layoutCfg.some(x => x.k === k)) layoutCfg = [{ k, on: true }, ...layoutCfg] });
+    if (!layoutCfg.some(x => x.k === "chats")) { const ai = layoutCfg.findIndex(x => x.k === "about"); layoutCfg = [...layoutCfg.slice(0, ai >= 0 ? ai : layoutCfg.length), { k: "chats", on: true }, ...layoutCfg.slice(ai >= 0 ? ai : layoutCfg.length)]; }
     if (!layoutCfg.some(x => x.k === "track")) { const ti = layoutCfg.findIndex(x => x.k === "trust"); layoutCfg = [...layoutCfg.slice(0, ti >= 0 ? ti + 1 : 1), { k: "track", on: true }, ...layoutCfg.slice(ti >= 0 ? ti + 1 : 1)]; }
     let cs = []; try { cs = JSON.parse(S.home_cat_sections || "[]") } catch (e) {}
     cs = (Array.isArray(cs) ? cs : []).filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), n: Math.min(12, Math.max(2, Number(x.n) || 8)) })).filter(x => x.c).slice(0, 10);
@@ -24,6 +25,7 @@ export default async (req, context) => {
     const sec = {
       intro: () => L.introHtml(S),
       reviews: () => L.reviewsHtml(S),
+      chats: () => L.chatsHtml(S),
       catsecs: () => cs.map((x, i) => csData[i].length ? `<section class="csec"><div class="csec-h"><h2 class="sec">${L.esc(x.c.name)}</h2><a class="csec-m" href="/c/${L.esc(encodeURIComponent(x.c.slug))}">عرض الكل</a></div><div class="grid">${L.cardsHtml(csData[i], csTm)}</div></section>` : "").join(""),
       trust: () => L.trustHtml(S),
       track: () => "",
