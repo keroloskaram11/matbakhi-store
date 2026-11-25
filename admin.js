@@ -78,7 +78,8 @@ async function loadAll(){
 const newStatusId=()=>(D.statuses[0]||{}).id;
 const newOrders=()=>D.orders.filter(o=>o.status_id===newStatusId()).length;
 const newWh=()=>D.wholesale.filter(w=>w.status==="جديد").length;
-function drawNav(){const bd={orders:newOrders()+newWh()};$("nav").innerHTML=NAV.filter(n=>!AREA[n[0]]||lvl(AREA[n[0]])!=="none").map(n=>`<button data-t="${n[0]}" class="${n[0]===tab?"on":""}">${n[1]}${bd[n[0]]?`<span class="bd">${bd[n[0]]}</span>`:""}</button>`).join("");$("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.t))}
+const IC={home:"🏠",products:"📦",cats:"🗂️",orders:"🧾",customers:"👥",abandoned:"🛒",reports:"📊",analytics:"📈",legal:"📄",apps:"🧩",look:"🎨",shipping:"🚚",coupons:"🏷️",wallet:"💳",settings:"⚙️",staff:"🔐"};
+function drawNav(){const bd={orders:newOrders()+newWh()};$("nav").innerHTML=NAV.filter(n=>!AREA[n[0]]||lvl(AREA[n[0]])!=="none").map(n=>`<button data-t="${n[0]}" class="${n[0]===tab?"on":""}"><span class="ni">${IC[n[0]]||"•"}</span><span class="nt">${n[1]}</span>${bd[n[0]]?`<span class="bd">${bd[n[0]]}</span>`:""}</button>`).join("");$("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.t))}
 function go(t){if(AREA[t]&&lvl(AREA[t])==="none"){t="home"}tab=t;if(t==="look")lookSub=null;location.hash=t;document.body.classList.remove("open");$("ptitle").textContent=NAV.find(n=>n[0]===t)[1];drawNav();V[t]();if(AREA[t]&&lvl(AREA[t])==="read"){$("view").insertAdjacentHTML("afterbegin","<div class=\"box msg\" style=\"background:#fff7e0\">🔒 صلاحيتك هنا: قراءة فقط. أي تعديل هيترفض.</div>")}scrollTo(0,0)}
 async function upload(file,prefix){const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-zA-Z0-9]/g,"").slice(0,5)||"jpg";const path=(prefix?prefix+"/":"")+Date.now()+"-"+Math.random().toString(36).slice(2,8)+"."+ext;
  const {error}=await sb.storage.from("product-images").upload(path,file,{contentType:file.type||undefined});if(error)throw error;return sb.storage.from("product-images").getPublicUrl(path).data.publicUrl}
@@ -134,7 +135,7 @@ V.home=()=>{
 };
 
 /* ---------- products ---------- */
-let editP=null,lim=100,gal=[];
+let editP=null,lim=100,gal=[],pPage=false,pTab="";
 const galOf=p=>{const a=Array.isArray(p.images)?p.images.filter(Boolean):[];return a.length?a.slice():(p.image_url?[p.image_url]:[])};
 async function shrink(file){ // resize big photos in the browser (max 1400px, JPEG) so the store loads fast and storage lasts
  try{if(!/^image\/(jpeg|png|webp)$/.test(file.type))return file;const bm=await createImageBitmap(file);const k=Math.min(1,1400/Math.max(bm.width,bm.height));if(k===1&&file.size<400000)return file;
@@ -146,12 +147,17 @@ function drawGal(){const g=$("gal");if(!g)return;g.innerHTML=gal.map((u,i)=>`<di
  g.querySelectorAll("[data-gn]").forEach(b=>b.onclick=()=>{const i=+b.dataset.gn;if(i<gal.length-1){[gal[i+1],gal[i]]=[gal[i],gal[i+1]];drawGal()}});
  g.querySelectorAll("[data-gx]").forEach(b=>b.onclick=()=>{gal.splice(+b.dataset.gx,1);drawGal()})}
 const tierRow=t=>`<div class="tier"><div><label>من كمية</label><input class="t-q" type="number" inputmode="numeric" min="2" value="${esc(t.min_qty??"")}"></div><div><label>سعر القطعة</label><input class="t-p" type="number" inputmode="decimal" value="${esc(t.unit_price??"")}"></div><div><label>اسم (اختياري: جملة، كرتونة)</label><input class="t-l" value="${esc(t.label)}"></div><button class="sm red t-x" type="button">x</button></div>`;
+
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.classList.add("show"),10);setTimeout(()=>{e.classList.remove("show");setTimeout(()=>e.remove(),300)},2400)}
+const TMURL="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.3.0/tinymce.min.js";
+function initEd(){const run=()=>{if(!window.tinymce||!$("pd"))return;tinymce.remove("#pd");document.querySelectorAll(".rtb,.rprev").forEach(e=>e.remove());tinymce.init({selector:"#pd",license_key:"gpl",directionality:"rtl",height:440,menubar:"edit view insert format tools table",plugins:"advlist autolink lists link image media table code fullscreen searchreplace charmap wordcount preview anchor visualblocks",toolbar:"undo redo | blocks | bold italic underline forecolor backcolor | alignright aligncenter alignleft | bullist numlist | link image media | table | code fullscreen",branding:false,promotion:false,convert_urls:false,relative_urls:false,automatic_uploads:true,images_upload_handler:async bi=>{const b=bi.blob();return await upload(await shrink(new File([b],bi.filename(),{type:b.type})))},media_alt_source:false,content_style:"body{font-family:Cairo,Tahoma,sans-serif;font-size:15px}"})};
+ if(window.tinymce)return run();if(window.__tmL)return;window.__tmL=1;const sc=document.createElement("script");sc.src=TMURL;sc.onload=run;sc.onerror=()=>{window.__tmL=0};document.head.appendChild(sc)}
 V.products=()=>{
  if(typeof impMode!=="undefined"&&impMode)return V.import();
  const q=($("ps")||{}).value||"",fc=($("pc")||{}).value||"";
- const list=D.products.filter(p=>(!q||(p.name||"").includes(q))&&(!fc||(fc==="none"?!p.category_id:p.category_id===fc)));
+ const list=D.products.filter(p=>(!pTab||(p.status||(p.active?"active":"inactive"))===pTab)&&(!q||(p.name||"").includes(q))&&(!fc||(fc==="none"?!p.category_id:p.category_id===fc)));
  const p=editP||{};const ts=editP?(D.tiers[String(p.id)]||[]):[];
- $("view").innerHTML=`<div class="box" id="pform"><button class="sm gray" id="impopen" style="float:left">استيراد من Excel / CSV</button><h3>${editP?"تعديل منتج":"منتج جديد"}</h3>
+ $("view").innerHTML=`<div class="box" id="pform" style="display:${pPage?"block":"none"}"><button class="sm gray" id="pback" type="button">&rarr; رجوع للمنتجات</button> <button class="sm gray" id="impopen" style="float:left">استيراد من Excel / CSV</button><h3>${editP?"تعديل منتج":"منتج جديد"}</h3>
  <label>الاسم</label><input id="pn" value="${esc(p.name)}"><label>الوصف (نص عادي أو HTML للتنسيق، الأكواد الخطيرة تُحذف تلقائياً)</label>
  <div class="rtb">${RT.map((t,i)=>`<button type="button" class="sm gray" data-rt="${i}">${t[0]}</button>`).join("")}</div><textarea id="pd" rows="7" dir="auto">${esc(p.description)}</textarea>
  <details class="rprev"><summary>معاينة الوصف كما سيظهر</summary><div id="pdprev" class="desc rich"></div></details>
@@ -164,12 +170,12 @@ V.products=()=>{
  <h4>المواصفات (خصائص المنتج) اختياري</h4><p class="hint">مثال: الخامة: ستانلس ستيل، البلد: مصر. بتظهر جدول في صفحة المنتج.</p>
  <div id="arows">${(Array.isArray(p.attributes)?p.attributes:[]).map(attrRow).join("")}</div><button class="sm gray" id="aadd" type="button">+ خاصية</button>
  <label style="margin-top:10px">صور المنتج (حتى 12، الأولى هي الرئيسية)</label><div id="gal" class="gal"></div><input id="pfs" type="file" accept="image/*" multiple><span id="gm" class="msg"></span>
- <div class="row"><label><input type="checkbox" id="pa" ${editP?(p.active?"checked":""):"checked"}>ظاهر في المتجر</label><label><input type="checkbox" id="pst" ${editP?(p.in_stock!==false?"checked":""):"checked"}>متوفر</label><label><input type="checkbox" id="pfe" ${p.featured?"checked":""}>منتج مميز (يظهر في الرئيسية)</label></div>
+ <div class="stsel"><label>حالة المنتج</label><select id="pstat">${[["active","نشط"],["inactive","غير نشط"],["unlisted","غير مدرج"]].map(o=>`<option value="${o[0]}" ${(editP?(p.status||(p.active?"active":"inactive")):"active")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select><p class="hint">نشط: ظاهر ويتباع. غير نشط: مخفي تماماً. غير مدرج: بيفتح بالرابط المباشر بس، ومش ظاهر في الأقسام والبحث.</p></div><div class="row"><label><input type="checkbox" id="pst" ${editP?(p.in_stock!==false?"checked":""):"checked"}>متوفر</label><label><input type="checkbox" id="pfe" ${p.featured?"checked":""}>منتج مميز (يظهر في الرئيسية)</label></div>
  <button id="psave">حفظ</button> <button class="gray" id="pcancel">إلغاء</button> <span id="pm"></span></div>
- <div class="box"><div class="row"><input id="ps" placeholder="بحث في المنتجات" value="${esc(q)}"><select id="pc"><option value="">كل التصنيفات</option><option value="none" ${fc==="none"?"selected":""}>بدون تصنيف</option>${D.cats.map(c=>`<option value="${esc(c.id)}" ${fc===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
- <p>عدد المنتجات: ${list.length} <button class="sm gray" id="pexp" type="button">تصدير المنتجات CSV</button> <button class="sm gray" id="ptpl" type="button">تحميل قالب فاضي</button></p><div class="scroll"><table><tr><th></th><th>الاسم</th><th>القسم</th><th>البيع</th><th>التكلفة</th><th>الربح</th><th>حالة</th><th></th></tr>
- ${list.slice(0,lim).map(x=>{const c=D.costs[String(x.id)],pr=x.sale_price??x.price;return `<tr><td>${x.image_url?`<img loading="lazy" src="${esc(x.image_url)}" alt="">`:""}</td><td>${esc(x.name)}${(D.tiers[String(x.id)]||[]).length?` <span class="pill2">جملة</span>`:""}${x.featured?` <span class="pill2">مميز</span>`:""}</td><td>${esc(catName(x.category_id))}</td><td>${fmt(pr)}</td><td>${c==null?"-":fmt(c)}</td><td>${c==null?"-":fmt(pr-c)}</td><td>${x.active?"ظاهر":"مخفي"}${x.in_stock===false?" / نفذ":""}</td>
- <td><button class="sm" data-e="${esc(x.id)}">تعديل</button> <button class="sm gray" data-tg="${esc(x.id)}">${x.active?"إخفاء":"إظهار"}</button> <button class="sm red" data-d="${esc(x.id)}">حذف</button></td></tr>`}).join("")}</table></div>
+ <div class="box" id="plbox" style="display:${pPage?"none":"block"}"><div class="ptabs">${[["","الجميع"],["active","نشط"],["inactive","غير نشط"],["unlisted","غير مدرج"]].map(t=>`<button type="button" data-pt="${t[0]}" class="${pTab===t[0]?"on":""}">${t[1]} <i>${D.products.filter(p=>!t[0]||(p.status||(p.active?"active":"inactive"))===t[0]).length}</i></button>`).join("")}</div><div class="row"><input id="ps" placeholder="بحث في المنتجات" value="${esc(q)}"><select id="pc"><option value="">كل التصنيفات</option><option value="none" ${fc==="none"?"selected":""}>بدون تصنيف</option>${D.cats.map(c=>`<option value="${esc(c.id)}" ${fc===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+ <p><button id="pnew" type="button">+ منتج جديد</button> <button class="sm gray" id="impopen2" type="button">استيراد Excel / CSV</button> عدد المنتجات: ${list.length} <button class="sm gray" id="pexp" type="button">تصدير المنتجات CSV</button> <button class="sm gray" id="ptpl" type="button">تحميل قالب فاضي</button></p><div class="plist">
+ ${list.slice(0,lim).map(x=>{const pr=x.sale_price??x.price,st=x.status||(x.active?"active":"inactive"),sc={active:["نشط","#16a34a"],inactive:["غير نشط","#6b7280"],unlisted:["غير مدرج","#d97706"]}[st],nv=(D.vars[String(x.id)]||[]).length;return `<div class="prow" data-e="${esc(x.id)}" role="button" tabindex="0">${x.image_url?`<img loading="lazy" src="${esc(x.image_url)}" alt="">`:`<span class="noimg"></span>`}<div class="pinf"><b>${esc(x.name)}</b><small>${esc(catName(x.category_id))||"بدون قسم"}${nv?" - "+nv+" خيارات":""}</small><div class="pchips"><span class="chip" style="background:${sc[1]}1a;color:${sc[1]}">${sc[0]}</span><span class="chip ${x.in_stock===false?"cr":"cg"}">${x.in_stock===false?"نفذ":"متوفر"}</span>${(D.tiers[String(x.id)]||[]).length?`<span class="chip">جملة</span>`:""}${x.featured?`<span class="chip">مميز</span>`:""}</div></div><div class="ppr">${fmt(pr)} <small>جنيه</small></div><button class="sm red" data-d="${esc(x.id)}" type="button" title="حذف">&#128465;</button></div>`}).join("")||"<p>لا توجد منتجات</p>"}
+</div>
  ${list.length>lim?`<button class="gray" id="pmore" style="display:block;margin:12px auto">عرض المزيد</button>`:""}</div>`;
  $("ps").oninput=()=>{lim=100;const pos=$("ps").selectionStart;V.products();$("ps").focus();$("ps").setSelectionRange(pos,pos)};$("pc").onchange=()=>{lim=100;V.products()};
  const PH=["Handle","Title","Description","SKU","Quantity","Regular Price","Sale Price","Cost","Images","Status","Collections"];
@@ -184,10 +190,12 @@ V.products=()=>{
  $("pfs").onchange=async()=>{const fs=[...$("pfs").files];for(const f of fs){if(gal.length>=12){flash("gm","الحد الأقصى 12 صورة");break}try{flash("gm","جاري رفع "+f.name+"...",true);gal.push(await upload(await shrink(f)));drawGal()}catch(e){flash("gm","خطأ في الرفع: "+e.message);return}}flash("gm","تم الرفع",true);$("pfs").value=""};
  const prev=()=>{$("pdprev").innerHTML=window.sanitizeHtml($("pd").value)};$("pd").oninput=prev;prev();
  document.querySelectorAll("[data-rt]").forEach(b=>b.onclick=()=>{const t=RT[+b.dataset.rt],ta=$("pd"),a=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(a,e);ta.value=ta.value.slice(0,a)+t[1]+sel+t[2]+ta.value.slice(e);ta.focus();prev()});
- $("psave").onclick=saveProduct;$("pcancel").onclick=()=>{editP=null;gal=[];V.products()};
+ $("psave").onclick=saveProduct;$("pcancel").onclick=()=>{editP=null;gal=[];pPage=false;V.products()};
  const find=id=>D.products.find(x=>String(x.id)===id);
- document.querySelectorAll("#view [data-e]").forEach(b=>b.onclick=()=>{editP=find(b.dataset.e);gal=galOf(editP);V.products();scrollTo(0,0)});
- document.querySelectorAll("#view [data-tg]").forEach(b=>b.onclick=async()=>{const x=find(b.dataset.tg);const {error}=await sb.from("products").update({active:!x.active}).eq("id",x.id);if(error)return alert(error.message);x.active=!x.active;V.products()});
+ document.querySelectorAll("#view .prow").forEach(b=>b.onclick=ev=>{if(ev.target.closest("[data-d]"))return;editP=find(b.dataset.e);gal=galOf(editP);pPage=true;V.products();scrollTo(0,0)});
+ $("pnew").onclick=()=>{editP=null;gal=[];pPage=true;V.products();scrollTo(0,0)};$("impopen2").onclick=()=>{impMode=true;V.import()};$("pback").onclick=()=>{editP=null;gal=[];pPage=false;V.products()};
+ document.querySelectorAll("#view [data-pt]").forEach(b=>b.onclick=()=>{pTab=b.dataset.pt;lim=100;V.products()});
+ if(pPage)initEd();
  document.querySelectorAll("#view [data-d]").forEach(b=>b.onclick=async()=>{const x=find(b.dataset.d);if(!confirm("حذف المنتج: "+x.name+"؟"))return;const {error}=await sb.from("products").delete().eq("id",x.id);if(error)return alert(error.message);const k=String(x.id);await sb.from("product_costs").delete().eq("product_id",k);await sb.from("product_price_tiers").delete().eq("product_id",k);D.products=D.products.filter(y=>y!==x);V.products()});
 };
 const varRow=v=>`<div class="vrow row" data-id="${esc(v.id||"")}"><div><label>اسم الخيار</label><input class="v-l" maxlength="60" value="${esc(v.label)}"></div><div><label>السعر (اختياري)</label><input class="v-p" type="number" inputmode="decimal" value="${esc(v.price)}"></div><div><label>سعر الخصم (اللي العميل بيدفعه، اختياري ولازم أقل من الأصلي)</label><input class="v-s" type="number" inputmode="decimal" value="${esc(v.sale_price)}"></div><label><input type="checkbox" class="v-i" style="width:auto" ${v.in_stock!==false?"checked":""}> متوفر</label><button class="sm red v-x" type="button">حذف</button></div>`;
@@ -195,9 +203,10 @@ const attrRow=a=>`<div class="arow row"><div><label>الخاصية</label><input
 async function saveProduct(){
  flash("pm","جاري الحفظ...",true);
  try{
+  if(window.tinymce)tinymce.triggerSave();
   if(gal.length>12)return flash("pm","الحد الأقصى 12 صورة");
   if($("psl").value&&num($("psl").value)>0&&num($("psl").value)>=num($("pp").value)){const t=$("pp").value;$("pp").value=$("psl").value;$("psl").value=t;if(num($("psl").value)>=num($("pp").value))$("psl").value="";alert("سعر الخصم لازم يكون أقل من الأصلي، فبدّلت الخانتين تلقائي")}
-  const row={name:$("pn").value.trim(),description:$("pd").value,price:num($("pp").value),sale_price:$("psl").value?num($("psl").value):null,image_url:gal[0]||null,images:gal.slice(),category_id:$("pcat").value||null,active:$("pa").checked,in_stock:$("pst").checked,featured:$("pfe").checked,min_order_qty:Math.max(1,parseInt($("pmoq").value)||1),attributes:[...document.querySelectorAll(".arow")].map(r=>({k:r.querySelector(".a-k").value.trim(),v:r.querySelector(".a-v").value.trim()})).filter(a=>a.k&&a.v)};
+  const row={name:$("pn").value.trim(),description:$("pd").value,price:num($("pp").value),sale_price:$("psl").value?num($("psl").value):null,image_url:gal[0]||null,images:gal.slice(),category_id:$("pcat").value||null,status:$("pstat").value,in_stock:$("pst").checked,featured:$("pfe").checked,min_order_qty:Math.max(1,parseInt($("pmoq").value)||1),attributes:[...document.querySelectorAll(".arow")].map(r=>({k:r.querySelector(".a-k").value.trim(),v:r.querySelector(".a-v").value.trim()})).filter(a=>a.k&&a.v)};
   if(!row.name||!row.price)return flash("pm","الاسم والسعر مطلوبين");
   const tiers=[...document.querySelectorAll(".tier")].map(r=>({min_qty:parseInt(r.querySelector(".t-q").value),unit_price:num(r.querySelector(".t-p").value),label:r.querySelector(".t-l").value.trim()||null})).filter(t=>t.min_qty>=2&&t.unit_price>0);
   if(new Set(tiers.map(t=>t.min_qty)).size!==tiers.length)return flash("pm","كمية مكررة في شرائح الأسعار");
@@ -215,7 +224,7 @@ async function saveProduct(){
   if(ins.length){const {error}=await sb.from("product_variants").insert(ins);if(error)throw error}
   {const {data,error}=await sb.from("product_variants").select("*").eq("product_id",pid).order("sort_order");if(error)throw error;if(data.length)D.vars[pid]=data;else delete D.vars[pid]}
   if(editP)Object.assign(editP,r.data);else D.products.unshift(r.data);
-  editP=null;gal=[];V.products();flash("pm","تم الحفظ",true);
+  editP=null;gal=[];pPage=false;V.products();scrollTo(0,0);toast("تم حفظ المنتج");
  }catch(e){flash("pm","خطأ: "+e.message)}
 }
 
