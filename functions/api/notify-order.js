@@ -7,7 +7,7 @@ function eq(a, b) { if (!a || !b || a.length !== b.length) return false; let r =
 
 function invoiceHtml(o, items, st) {
   const sub = items.reduce((a, i) => a + i.qty * i.unit_price, 0), ship = Math.max(0, Number(o.total) - sub);
-  const date = new Date(o.created_at).toLocaleDateString("ar-EG-u-nu-latn", { timeZone: "Africa/Cairo", year: "numeric", month: "long", day: "numeric" });
+  const date = new Date(o.created_at).toLocaleDateString("en-GB", { timeZone: "Africa/Cairo", day: "2-digit", month: "2-digit", year: "numeric" });
   const wa = st.whatsapp || "", waShow = wa.startsWith("20") ? "0" + wa.slice(2) : wa;
   const name = st.store_name || "مطبخي بالجملة", brand = /^#[0-9a-fA-F]{6}$/.test(st.primary_color || "") ? st.primary_color : "#7a3e1d";
   const logo = safeUrl(st.logo_url);
@@ -53,9 +53,27 @@ ${items.map(i => `<tr><td class="im">${safeUrl(i.image_url) ? `<img src="${esc(i
 }
 
 export const onRequestPost = async ({ request, env }) => {
-  if (!eq(request.headers.get("x-notify-secret") || "", env.NOTIFY_SECRET || "")) return new Response("forbidden", { status: 403 });
   let d; try { d = await request.json() } catch { return new Response("bad json", { status: 400 }) }
-  const o = d.order, items = Array.isArray(d.items) ? d.items.slice(0, 30) : [];
+  const auth = request.headers.get("authorization") || "";
+  let o, items, download = false;
+  if (/^Bearer /i.test(auth)) {
+    // Admin download: verify the signed-in admin, read the order under their own permissions.
+    const H = { apikey: KEY, Authorization: auth };
+    const u = await fetch("https://vezbhmmufmvgquoujylm.supabase.co/auth/v1/user", { headers: H });
+    if (!u.ok || !/^[0-9a-f-]{36}$/i.test(String(d.order_id || ""))) return new Response("forbidden", { status: 403 });
+    const r = await (await fetch(`${SB}/orders?id=eq.${d.order_id}&select=order_no,customer_name,phone,address,governorate,notes,total,created_at,order_items(product_id,product_name,qty,unit_price)`, { headers: H })).json().catch(() => []);
+    if (!Array.isArray(r) || !r[0]) return new Response("not found", { status: 404 });
+    o = r[0]; items = (o.order_items || []).slice(0, 30); download = true;
+    const ids = items.map(i => i.product_id).filter(Boolean);
+    if (ids.length) {
+      const ps = await (await fetch(`${SB}/products?select=id,image_url&id=in.(${ids.join(",")})`, { headers: { apikey: KEY } })).json().catch(() => []);
+      const m = Object.fromEntries((ps || []).map(p => [p.id, p.image_url]));
+      items = items.map(i => ({ ...i, image_url: m[i.product_id] }));
+    }
+  } else {
+    if (!eq(request.headers.get("x-notify-secret") || "", env.NOTIFY_SECRET || "")) return new Response("forbidden", { status: 403 });
+    o = d.order; items = Array.isArray(d.items) ? d.items.slice(0, 30) : [];
+  }
   if (!o || !items.length) return new Response("bad data", { status: 400 });
   const rows = await (await fetch(`${SB}/settings?select=key,value`, { headers: { apikey: KEY } })).json().catch(() => []);
   const st = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
@@ -66,7 +84,7 @@ export const onRequestPost = async ({ request, env }) => {
   });
   if (!pr.ok) return new Response("pdf failed " + pr.status + " " + (await pr.text()).slice(0, 300), { status: 502 });
   const pdf = await pr.arrayBuffer();
-  if (request.headers.get("x-preview") === "1") return new Response(pdf, { headers: { "content-type": "application/pdf" } });
+  if (download || request.headers.get("x-preview") === "1") return new Response(pdf, { headers: { "content-type": "application/pdf" } });
   const fd = new FormData();
   fd.append("chat_id", env.TG_CHAT_ID);
   fd.append("caption", `🧾 فاتورة الطلب #${o.order_no} جاهزة لإرسالها للعميل`);
