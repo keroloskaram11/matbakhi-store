@@ -164,7 +164,7 @@ async function saveProduct(){
  flash("pm","جاري الحفظ...",true);
  try{
   if(gal.length>12)return flash("pm","الحد الأقصى 12 صورة");
-  if($("psl").value&&num($("psl").value)>0&&num($("psl").value)>=num($("pp").value)){const t=$("pp").value;$("pp").value=$("psl").value;$("psl").value=t;if(num($("psl").value)>=num($("pp").value))$("psl").value="";flash("سعر الخصم لازم يكون أقل من الأصلي، فبدّلت الخانتين تلقائي")}
+  if($("psl").value&&num($("psl").value)>0&&num($("psl").value)>=num($("pp").value)){const t=$("pp").value;$("pp").value=$("psl").value;$("psl").value=t;if(num($("psl").value)>=num($("pp").value))$("psl").value="";alert("سعر الخصم لازم يكون أقل من الأصلي، فبدّلت الخانتين تلقائي")}
   const row={name:$("pn").value.trim(),description:$("pd").value,price:num($("pp").value),sale_price:$("psl").value?num($("psl").value):null,image_url:gal[0]||null,images:gal.slice(),category_id:$("pcat").value||null,active:$("pa").checked,in_stock:$("pst").checked,featured:$("pfe").checked,min_order_qty:Math.max(1,parseInt($("pmoq").value)||1),attributes:[...document.querySelectorAll(".arow")].map(r=>({k:r.querySelector(".a-k").value.trim(),v:r.querySelector(".a-v").value.trim()})).filter(a=>a.k&&a.v)};
   if(!row.name||!row.price)return flash("pm","الاسم والسعر مطلوبين");
   const tiers=[...document.querySelectorAll(".tier")].map(r=>({min_qty:parseInt(r.querySelector(".t-q").value),unit_price:num(r.querySelector(".t-p").value),label:r.querySelector(".t-l").value.trim()||null})).filter(t=>t.min_qty>=2&&t.unit_price>0);
@@ -190,23 +190,47 @@ async function saveProduct(){
 /* ---------- customers (built from orders, grouped by phone) ---------- */
 let custQ="",custOpen=null;
 const normPh=p=>{p=String(p||"").replace(/[\u0660-\u0669]/g,d=>d.charCodeAt(0)-0x660).replace(/\D/g,"");return p.length>=10?p.slice(-10):p};
-function buildCustomers(){const m=new Map();
- D.orders.forEach(o=>{const k=normPh(o.phone)||("n:"+o.customer_name);let c=m.get(k);if(!c){c={key:k,name:o.customer_name,phone:o.phone,gov:o.governorate,orders:[],spend:0,cnt:0,first:o.created_at,last:o.created_at};m.set(k,c)}
-  c.orders.push(o);const st=stOf(o.status_id)||{counts_in_profit:true};if(st.counts_in_profit){c.spend+=Number(o.total)||0;c.cnt++}
-  if(o.created_at>c.last){c.last=o.created_at;c.name=o.customer_name;c.gov=o.governorate||c.gov}if(o.created_at<c.first)c.first=o.created_at});
- return [...m.values()].sort((a,b)=>b.spend-a.spend||(b.last>a.last?1:-1))}
-V.customers=()=>{
- const all=buildCustomers(),q=custQ.trim().toLowerCase(),list=all.filter(c=>!q||(c.name||"").toLowerCase().includes(q)||String(c.phone||"").includes(q));
- const tot=all.reduce((a,c)=>a+c.spend,0),rep=all.filter(c=>c.orders.length>1).length;
- $("view").innerHTML=`<div class="box"><div class="stat"><div>عدد العملاء<b>${all.length}</b></div><div>عملاء كرروا الشراء<b>${rep}</b></div></div>
- <p class="hint">العملاء بيتجمعوا من الطلبات بنفس رقم الموبايل. إجمالي الإنفاق بيحسب الطلبات اللي حالتها بتدخل في الأرباح (غير الملغية). إجمالي الكل: ${fmt(tot)} جنيه.</p>
- <div class="row"><input id="cq" placeholder="بحث بالاسم أو الموبايل" value="${esc(custQ)}"> <button class="sm gray" id="ccsv" type="button" style="width:auto;align-self:center;padding:8px 14px">تصدير العملاء CSV</button></div>
- <p>عدد النتائج: ${list.length}</p><div class="scroll"><table><tr><th>العميل</th><th>الموبايل</th><th>المحافظة</th><th>الطلبات</th><th>إجمالي الإنفاق</th><th>آخر طلب</th><th></th></tr>
- ${list.slice(0,200).map(c=>`<tr><td>${esc(c.name)}</td><td dir="ltr">${esc(c.phone)}</td><td>${esc(c.gov||"")}</td><td>${c.orders.length}</td><td>${fmt(c.spend)}</td><td>${dmy(c.last)}</td><td><button class="sm" data-c="${esc(c.key)}">${custOpen===c.key?"إخفاء":"الطلبات"}</button></td></tr>${custOpen===c.key?`<tr><td colspan="7"><div class="oact" style="flex-direction:column;align-items:stretch">${c.orders.map(o=>`<div class="ord"><b>#${o.order_no}</b> ${dmy(o.created_at)} - ${esc((stOf(o.status_id)||{}).name||"")} - ${fmt(o.total)} جنيه${o.payment_method&&o.payment_status&&o.payment_status!=="cod"?" - "+esc(o.payment_method)+(o.payment_status==="paid"?" (مدفوع)":" (بانتظار تأكيد الدفع)"):""}</div>`).join("")}</div></td></tr>`:""}`).join("")}</table></div>${list.length>200?"<p class='hint'>أول 200 نتيجة، استخدم البحث.</p>":""}</div>`;
- $("cq").oninput=()=>{custQ=$("cq").value;const p=$("cq").selectionStart;V.customers();$("cq").focus();$("cq").setSelectionRange(p,p)};
- document.querySelectorAll("#view [data-c]").forEach(b=>b.onclick=()=>{custOpen=custOpen===b.dataset.c?null:b.dataset.c;V.customers()});
- $("ccsv").onclick=()=>csv("customers-"+today()+".csv",[["الاسم","الموبايل","المحافظة","عدد الطلبات","إجمالي الإنفاق","أول طلب","آخر طلب"]].concat(list.map(c=>[c.name,c.phone,c.gov||"",c.orders.length,c.spend,c.first.slice(0,10),c.last.slice(0,10)])));
-};
+let custF="all",custData=null,custLed={};
+const VBADGE='<svg class="vbadge" title="حساب مسجّل" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+async function custLoad(){
+ const [a,b]=await Promise.all([sb.rpc("admin_customers"),sb.rpc("admin_accounts")]);
+ if(a.error)throw a.error;
+ const rows=(a.data||[]).map(r=>({...r,key:r.phone}));const have=new Set(rows.map(r=>r.user_id).filter(Boolean));
+ (b.data||[]).forEach(x=>{if(!have.has(x.user_id))rows.push({key:"u:"+x.user_id,phone:x.phone||"",name:x.name||x.email,phone2:x.phone2,email:x.email,address:x.address,governorate:x.governorate,orders:0,total_spent:0,last_order:x.created_at,user_id:x.user_id,registered:true,balance:x.balance,items:[]})});
+ custData=rows}
+V.customers=async()=>{
+ $("view").innerHTML='<div class="box"><p>جاري التحميل...</p></div>';
+ try{await custLoad()}catch(e){$("view").innerHTML='<div class="box"><p class="msg">تعذر تحميل العملاء: '+esc(e.message||e)+'</p></div>';return}
+ custDraw()};
+function custOrders(c){return D.orders.filter(o=>(c.user_id&&o.user_id===c.user_id)||(c.phone&&normPh(o.phone)===normPh(c.phone)))}
+function custDraw(){
+ const all=custData||[],q=custQ.trim().toLowerCase(),qd=q.replace(/\D/g,"");
+ const list=all.filter(c=>(custF==="all"||(custF==="reg"?c.registered:!c.registered))&&(!q||(c.name||"").toLowerCase().includes(q)||(c.email||"").toLowerCase().includes(q)||(qd&&String(c.phone||"").includes(qd))));
+ const reg=all.filter(c=>c.registered).length,tot=all.reduce((a,c)=>a+Number(c.total_spent||0),0);
+ $("view").innerHTML=`<div class="box"><div class="stat"><div>كل العملاء<b>${all.length}</b></div><div>مسجّلين (شارة زرقا)<b>${reg}</b></div><div>زوار<b>${all.length-reg}</b></div></div>
+ <p class="hint">كل مشتري بيتضاف تلقائي من أول طلب (بدون تكرار حسب رقم الموبايل). الشارة الزرقا للي عمل حساب أو سجّل دخول من الموقع. إجمالي مشترياتهم: ${fmt(tot)} جنيه.</p>
+ <div class="row"><input id="cq" placeholder="بحث بالاسم أو الموبايل أو الإيميل" value="${esc(custQ)}"><select id="cf"><option value="all"${custF==="all"?" selected":""}>الكل</option><option value="reg"${custF==="reg"?" selected":""}>مسجّلين</option><option value="guest"${custF==="guest"?" selected":""}>زوار</option></select> <button class="sm gray" id="ccsv" type="button" style="width:auto;align-self:center;padding:8px 14px">تصدير CSV</button></div>
+ <p>عدد النتائج: ${list.length}</p><div class="scroll"><table><tr><th>العميل</th><th>الموبايل</th><th>الطلبات</th><th>إجمالي الشراء</th><th>آخر طلب</th><th></th></tr>
+ ${list.slice(0,200).map(c=>`<tr><td>${esc(c.name||"")} ${c.registered?VBADGE:""}</td><td dir="ltr">${esc(c.phone||"")}</td><td>${c.orders}</td><td>${fmt(c.total_spent)}</td><td>${c.last_order?dmy(c.last_order):""}</td><td><button class="sm" data-c="${esc(c.key)}">${custOpen===c.key?"إخفاء":"التفاصيل"}</button></td></tr>${custOpen===c.key?`<tr><td colspan="6">${custDetail(c)}</td></tr>`:""}`).join("")}</table></div>${list.length>200?"<p class='hint'>أول 200 نتيجة، استخدم البحث.</p>":""}</div>`;
+ $("cq").oninput=()=>{custQ=$("cq").value;const p=$("cq").selectionStart;custDraw();$("cq").focus();$("cq").setSelectionRange(p,p)};
+ $("cf").onchange=()=>{custF=$("cf").value;custDraw()};
+ document.querySelectorAll("#view [data-c]").forEach(b=>b.onclick=async()=>{custOpen=custOpen===b.dataset.c?null:b.dataset.c;const c=custData.find(x=>x.key===custOpen);if(c&&c.user_id){const {data}=await sb.rpc("admin_wallet_ledger",{p_user:c.user_id});custLed[c.user_id]=data||[]}custDraw()});
+ document.querySelectorAll("#view [data-wa]").forEach(b=>b.onclick=async()=>{const c=custData.find(x=>x.key===custOpen),amt=Number($("wamt").value),note=$("wnote").value.trim(),sign=b.dataset.wa==="add"?1:-1;if(!(amt>0))return flash("wmsg","اكتب مبلغ صحيح");if(!confirm((sign>0?"شحن ":"خصم ")+fmt(amt)+" جنيه "+(sign>0?"في":"من")+" محفظة "+(c.name||c.email)+"؟"))return;b.disabled=true;const {data,error}=await sb.rpc("admin_wallet_adjust",{p_user:c.user_id,p_amount:sign*amt,p_kind:sign>0?"topup":"adjust",p_note:note||(sign>0?"شحن من المتجر":"خصم من المتجر")});b.disabled=false;if(error)return flash("wmsg",error.message);c.balance=data.balance;const l=await sb.rpc("admin_wallet_ledger",{p_user:c.user_id});custLed[c.user_id]=l.data||[];custDraw();flash("wmsg","تم",true)});
+ $("ccsv").onclick=()=>csv("customers-"+today()+".csv",[["الاسم","الموبايل","موبايل 2","الإيميل","المحافظة","العنوان","مسجّل","عدد الطلبات","إجمالي الشراء","رصيد المحفظة"]].concat(list.map(c=>[c.name,c.phone,c.phone2||"",c.email||"",c.governorate||"",c.address||"",c.registered?"نعم":"لا",c.orders,c.total_spent,c.balance==null?"":c.balance])));
+}
+function custDetail(c){
+ const os=custOrders(c),led=custLed[c.user_id]||[],K2={topup:"شحن",refund:"استرجاع",adjust:"تعديل",spend:"دفع طلب"};
+ return `<div class="oact" style="flex-direction:column;align-items:stretch;gap:8px">
+ <div><b>${esc(c.name||"")}</b> ${c.registered?VBADGE+" حساب مسجّل":"زائر (من غير حساب)"}</div>
+ <div>الموبايل: <span dir="ltr">${esc(c.phone||"-")}</span> | موبايل تاني: <span dir="ltr">${esc(c.phone2||"-")}</span></div>
+ <div>الإيميل: <span dir="ltr">${esc(c.email||"-")}</span></div><div>العنوان: ${esc([c.governorate,c.address].filter(Boolean).join(" - ")||"-")}</div>
+ <div>عدد الطلبات: <b>${c.orders}</b> | إجمالي الشراء: <b>${fmt(c.total_spent)} جنيه</b></div>
+ <div>الأصناف اللي طلبها: ${(c.items&&c.items.length)?c.items.map(esc).join("، "):"-"}</div>
+ <div><b>الطلبات:</b></div>${os.length?os.map(o=>`<div class="ord"><b>#${o.order_no}</b> ${dmy(o.created_at)} - ${esc((stOf(o.status_id)||{}).name||"")} - ${fmt(o.total)} جنيه${Number(o.wallet_used)>0?" (من المحفظة "+fmt(o.wallet_used)+")":""}</div>`).join(""):"<div>-</div>"}
+ ${c.registered?`<div class="box" style="margin:6px 0"><b>اللي العميل شايفه في حسابه</b><div>رصيد المحفظة: <b>${fmt(c.balance)} جنيه</b></div>
+ <div class="row"><input id="wamt" type="number" inputmode="decimal" placeholder="المبلغ"><input id="wnote" placeholder="ملاحظة (اختياري)"></div>
+ <div class="row"><button class="sm" data-wa="add" type="button">شحن المحفظة</button><button class="sm gray" data-wa="sub" type="button">خصم من المحفظة</button></div><p id="wmsg" class="msg"></p>
+ <div><b>سجل المحفظة:</b></div>${led.length?led.map(x=>`<div class="ord">${esc(K2[x.kind]||x.kind)}${x.order_no?" #"+x.order_no:""} : <b style="color:${Number(x.amount)<0?"#c0392b":"#15803d"}">${Number(x.amount)>0?"+":""}${fmt(x.amount)}</b> - ${dmy(x.at)}${x.note?" - "+esc(x.note):""}${x.by?" (بواسطة "+esc(x.by)+")":""}</div>`).join(""):"<div>مفيش حركات</div>"}</div>`:""}</div>`}
 
 /* ---------- abandoned checkouts ---------- */
 V.abandoned=async()=>{
