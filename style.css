@@ -210,3 +210,6 @@ body.cimg-tall .card .imgl img,body.cimg-tall .card .ph{aspect-ratio:4/5;height:
 body.nobadge .card .badge:not(.gr){display:none}
 body.notier .card .tierhint{display:none}
 body.cr-l .card{border-radius:22px;overflow:hidden}body.cr-s .card{border-radius:4px;overflow:hidden}
+
+.cprow{display:flex;gap:8px}.cprow input{flex:1;margin:0}.cprow .btn{width:auto;padding:0 16px}
+.trk{list-style:none;display:flex;gap:6px;padding:0;margin:14px 0 4px}.trk li{flex:1;text-align:center;font-size:13px;color:#888}.trk li span{display:block;width:30px;height:30px;line-height:30px;border-radius:50%;background:#e5e5e5;color:#666;margin:0 auto 6px;font-weight:700}.trk li.on{color:var(--accent);font-weight:700}.trk li.on span{background:var(--accent);color:#fff}

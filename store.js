@@ -36,9 +36,9 @@
   window.StoreTrack = track;
 
   /* ---------- cart (prices shown here are for display; the server re-prices everything) ---------- */
-  let cart = [], waMode = false;
+  let cart = [], waMode = false, coupon = null, couponOn = null;
   try { cart = JSON.parse(localStorage.getItem("cart") || "[]").filter(i => i && i.id && i.qty > 0) } catch (e) {}
-  const save = () => { try { localStorage.setItem("cart", JSON.stringify(cart)) } catch (e) {} };
+  const save = () => { coupon = null; try { localStorage.setItem("cart", JSON.stringify(cart)) } catch (e) {} };
   const unit = (i, q) => { let p = i.price; (i.tiers || []).forEach(t => { if (q >= t[0] && t[1] < p) p = t[1] }); return p };
   const unitOf = i => unit(i, i.qty);
   const sub = () => cart.reduce((a, i) => a + i.qty * unitOf(i), 0);
@@ -69,10 +69,11 @@
     if (n) $("barbtn").onclick = open;
     if (!$("drawer").hidden && $("dtitle").dataset.v === "cart") view("cart");
   }
+  const couponDisc = () => (coupon ? Math.min(coupon.disc, sub()) : 0);
   function summary(g) {
-    const s = sub(), sh = shipFor(g), minZ = zones.length ? Math.min(...zones.map(z => +z.fee)) : 0, maxZ = zones.length ? Math.max(...zones.map(z => +z.fee)) : 0;
+    const s = sub(), disc = couponDisc(), sh = shipFor(g), minZ = zones.length ? Math.min(...zones.map(z => +z.fee)) : 0, maxZ = zones.length ? Math.max(...zones.map(z => +z.fee)) : 0;
     const shTxt = sh === 0 ? "مجاني" : sh == null ? (zones.length ? `${fmt(minZ)}${maxZ !== minZ ? " - " + fmt(maxZ) : ""} جنيه (حسب المحافظة)` : "حسب المحافظة") : fmt(sh) + " جنيه";
-    return `<div class="sum"><div><span>المنتجات</span><b>${fmt(s)} جنيه</b></div><div><span>الشحن</span><b>${shTxt}</b></div><div class="tot"><span>الإجمالي (الدفع عند الاستلام)</span><b>${sh == null ? fmt(s) + " + الشحن" : fmt(s + sh) + " جنيه"}</b></div>${freeMin() > 0 && s < freeMin() ? `<small>أضف ${fmt(freeMin() - s)} جنيه للحصول على شحن مجاني</small>` : ""}</div>` }
+    return `<div class="sum"><div><span>المنتجات</span><b>${fmt(s)} جنيه</b></div><div><span>الشحن</span><b>${shTxt}</b></div>${disc ? `<div><span>خصم الكوبون (${esc(coupon.code)})</span><b>-${fmt(disc)} جنيه</b></div>` : ""}<div class="tot"><span>الإجمالي (الدفع عند الاستلام)</span><b>${sh == null ? fmt(s - disc) + " + الشحن" : fmt(s - disc + sh) + " جنيه"}</b></div>${freeMin() > 0 && s < freeMin() ? `<small>أضف ${fmt(freeMin() - s)} جنيه للحصول على شحن مجاني</small>` : ""}</div>` }
   function waShort(no, name, phone, key) { return `طلب جديد رقم #${no}\nالاسم: ${name}\nالموبايل: ${phone}\nالفاتورة PDF: ${location.origin}/api/notify-order?k=${key}` }
   function waCart() { return "عايز أطلب:\n" + cart.map(i => `- ${i.name} × ${i.qty} (${fmt(unitOf(i))} جنيه)`).join("\n") + `\nالمنتجات: ${fmt(sub())} جنيه` }
   function nextTier(i) { const t = (i.tiers || []).filter(t => t[0] > i.qty && t[1] < unitOf(i)).sort((a, b) => a[0] - b[0])[0]; return t ? `<small class="tn">اطلب ${t[0]} قطعة بسعر ${fmt(t[1])} للقطعة</small>` : "" }
@@ -97,13 +98,28 @@
         <label>المحافظة</label><select id="cg" required><option value="">اختر المحافظة</option>${zones.map(z => `<option value="${esc(z.governorate)}">${esc(z.governorate)}</option>`).join("")}</select>
         <label>العنوان بالتفصيل (المنطقة، الشارع، رقم المبنى)</label><textarea id="ca" rows="3" required maxlength="400"></textarea>
         <label>ملاحظات (اختياري)</label><input id="cnote" maxlength="300">
+        <div id="cpbox" hidden><label>كود الخصم (اختياري)</label><div class="cprow"><input id="cpin" dir="ltr" maxlength="30" autocomplete="off" autocapitalize="characters"><button type="button" class="btn gray" id="cpgo">تطبيق</button></div><p class="msg" id="cpmsg"></p></div>
         <input id="web" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px" aria-hidden="true">
         <div id="csum">${summary("")}</div><p class="msg" id="cerr"></p>
         <button class="btn full" id="csub" type="submit">تأكيد الطلب - الدفع عند الاستلام</button><button class="gray full btn" id="cback" type="button">رجوع للسلة</button></form>`;
       try { const g = localStorage.getItem("gov"); if (g && zoneFee(g) != null) { $("cg").value = g; $("csum").innerHTML = summary(g) } } catch (e) {}
       $("cg").onchange = () => { try { localStorage.setItem("gov", $("cg").value) } catch (e) {} $("csum").innerHTML = summary($("cg").value) };
       $("cback").onclick = () => { waMode = false; view("cart") }; $("ck").onsubmit = submit;
+      initCoupon();
     } else if (v === "done") { $("dtitle").textContent = "تم استلام طلبك" }
+  }
+  async function initCoupon() {
+    try { if (couponOn === null) { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/coupons_active", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: "{}" }); couponOn = (await r.json()) === true } } catch (e) { couponOn = false }
+    const box = $("cpbox"); if (!box || !couponOn) return; box.hidden = false;
+    if (coupon) { $("cpin").value = coupon.code; $("cpmsg").textContent = "تم تطبيق الخصم"; $("cpmsg").className = "ok" }
+    $("cpgo").onclick = async () => {
+      const code = $("cpin").value.trim().toUpperCase(), m = $("cpmsg"); m.className = "msg"; m.textContent = "";
+      if (!code) { coupon = null; $("csum").innerHTML = summary($("cg").value); return }
+      $("cpgo").disabled = true;
+      try { const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/check_coupon", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_code: code, p_subtotal: sub() }) }); const j = await r.json();
+        if (j && j.ok) { coupon = { code, disc: Number(j.discount) }; m.className = "ok"; m.textContent = "تم تطبيق الخصم: " + fmt(j.discount) + " جنيه" } else { coupon = null; m.textContent = (j && j.message) || "كود الخصم غير صالح" } }
+      catch (e) { coupon = null; m.textContent = "تعذر التحقق من الكود" }
+      $("cpgo").disabled = false; $("csum").innerHTML = summary($("cg").value) };
   }
   const fail = m => { $("cerr").textContent = m; $("csub").disabled = false; $("csub").textContent = "تأكيد الطلب - الدفع عند الاستلام" };
   async function submit(e) {
@@ -116,11 +132,11 @@
     const snapshot = cart.map(i => ({ id: i.id, name: i.name, price: unitOf(i), qty: i.qty }));
     try {
       const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty })), p_key: key, p_website: $("web").value }) });
+        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
-      const okey = key; const wasWa = waMode; waMode = false; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
-      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)</p><p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
+      const okey = key; const wasWa = waMode; waMode = false; coupon = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
+      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)</p><p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }
