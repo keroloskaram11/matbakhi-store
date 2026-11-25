@@ -156,8 +156,10 @@
       $("cartwa").onclick = e => { e.preventDefault(); waMode = true; track("Lead", { name: "cart", value: sub() }); view("form") };
     } else if (v === "form") {
       $("dtitle").textContent = "بيانات التوصيل";
-      b.innerHTML = `<form id="ck" novalidate><label>الاسم</label><input id="cn" autocomplete="name" required maxlength="80">
+      b.innerHTML = `<form id="ck" novalidate><div class="cnrow"><div><label>الاسم الأول</label><input id="cn" autocomplete="given-name" required maxlength="40"></div><div><label>الاسم الأخير</label><input id="cn2" autocomplete="family-name" required maxlength="40"></div></div>
+        <label>الإيميل</label><input id="cem" type="email" inputmode="email" autocomplete="email" dir="ltr" placeholder="name@example.com" required maxlength="120">
         <label>رقم الموبايل</label><input id="cp" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
+        <label>رقم موبايل آخر (احتياطي)</label><input id="cp2" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
         <label>المحافظة</label><select id="cg" required><option value="">اختر المحافظة</option>${zones.map(z => `<option value="${esc(z.governorate)}">${esc(z.governorate)}</option>`).join("")}</select>
         <label>العنوان بالتفصيل (المنطقة، الشارع، رقم المبنى)</label><textarea id="ca" rows="3" required maxlength="400"></textarea>
         <label>ملاحظات (اختياري)</label><input id="cnote" maxlength="300">
@@ -169,7 +171,7 @@
       $("cg").onchange = () => { try { localStorage.setItem("gov", $("cg").value) } catch (e) {} refreshTotals() };
       renderPay();
       $("cback").onclick = () => { waMode = false; view("cart") }; $("ck").onsubmit = submit;
-      let abT = null; const abSave = () => { const ph = ($("cp").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""); if (!/^(20|0020|0)?1[0125]\d{8}$/.test(ph) || !cart.length) return; let k = sessionStorage.getItem("ckey"); if (!k) { k = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", k) } fetch(window.SUPABASE_URL + "/rest/v1/rpc/save_abandoned", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_key: k, p_name: ($("cn").value || "").trim(), p_phone: ph, p_governorate: $("cg").value || null, p_items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: unitOf(i) })), p_total: sub(), p_website: $("web") ? $("web").value : "" }), keepalive: true }).catch(() => {}) };
+      let abT = null; const abSave = () => { const ph = ($("cp").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""); if (!/^(20|0020|0)?1[0125]\d{8}$/.test(ph) || !cart.length) return; let k = sessionStorage.getItem("ckey"); if (!k) { k = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)); sessionStorage.setItem("ckey", k) } fetch(window.SUPABASE_URL + "/rest/v1/rpc/save_abandoned", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_key: k, p_name: (($("cn").value || "") + " " + ($("cn2") ? $("cn2").value || "" : "")).trim(), p_phone: ph, p_governorate: $("cg").value || null, p_items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: unitOf(i) })), p_total: sub(), p_website: $("web") ? $("web").value : "" }), keepalive: true }).catch(() => {}) };
       $("ck").addEventListener("input", () => { clearTimeout(abT); abT = setTimeout(abSave, 2500) }); $("ck").addEventListener("change", () => { clearTimeout(abT); abT = setTimeout(abSave, 800) });
       initCoupon();
     } else if (v === "done") { $("dtitle").textContent = "تم استلام طلبك" }
@@ -214,8 +216,11 @@
   const fail = m => { $("cerr").textContent = m; $("csub").disabled = false; $("csub").textContent = btnText() };
   async function submit(e) {
     e.preventDefault(); const btn = $("csub"); $("cerr").textContent = "";
-    const name = $("cn").value.trim(), phone = $("cp").value.trim(), addr = $("ca").value.trim();
-    if (name.length < 2) return fail("اكتب اسمك"); if (!/^(\+?20|0020|0)?1[0125]\d{8}$/.test(phone.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "").replace(/^/, ""))) return fail("رقم الموبايل غير صحيح (مثال 01001234567)");
+    const fn = $("cn").value.trim(), ln = $("cn2").value.trim(), name = (fn + " " + ln).trim(), phone = $("cp").value.trim(), phone2 = $("cp2").value.trim(), email = $("cem").value.trim(), addr = $("ca").value.trim();
+    const okPh = v => /^(\+?20|0020|0)?1[0125]\d{8}$/.test(v.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""));
+    if (fn.length < 2) return fail("اكتب الاسم الأول"); if (ln.length < 2) return fail("اكتب الاسم الأخير");
+    if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/.test(email)) return fail("اكتب إيميل صحيح (مثال name@gmail.com)");
+    if (!okPh(phone2)) return fail("اكتب رقم موبايل آخر صحيح (مثال 01001234567)"); if (!/^(\+?20|0020|0)?1[0125]\d{8}$/.test(phone.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "").replace(/^/, ""))) return fail("رقم الموبايل غير صحيح (مثال 01001234567)");
     if (!$("cg").value) return fail("اختر المحافظة"); if (addr.length < 8) return fail("اكتب العنوان بالتفصيل");
     let proof = null, ref = null;
     if (payKind() !== "cod") {
@@ -228,7 +233,7 @@
     const snapshot = cart.map(i => ({ id: i.id, name: i.name, price: unitOf(i), qty: i.qty }));
     try {
       const r = await fetch(window.SUPABASE_URL + "/rest/v1/rpc/place_order", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length ? payId : null, p_pay_ref: ref, p_pay_proof: proof }) });
+        body: JSON.stringify({ p_name: name, p_phone: phone, p_governorate: $("cg").value, p_address: addr, p_notes: $("cnote").value.trim(), p_items: cart.map(i => ({ product_id: i.id, qty: i.qty, variant_id: i.vid || null })), p_key: key, p_website: $("web").value, p_coupon: coupon ? coupon.code : null, p_pay_method: methods().length ? payId : null, p_pay_ref: ref, p_pay_proof: proof, p_email: email, p_phone2: phone2 }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
