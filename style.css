@@ -262,3 +262,22 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .cbg{padding:14px 12px;border-radius:16px;margin:14px 0}
 .txs{text-align:center;padding:10px 6px}.txs p{white-space:pre-line;line-height:1.9;margin:6px 0}
 .bns{margin:14px 0}.bns img{width:100%;display:block;border-radius:14px}
+
+.ost{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:22px 14px;margin:14px 0;text-align:center;color:#0f172a;box-shadow:0 8px 24px #0000000f}
+.ost-b{background:#dc2626;color:#fff;font-weight:800;font-size:14px;padding:11px 16px;border-radius:50px;box-shadow:0 4px 14px #dc262640;display:flex;align-items:center;justify-content:center;gap:9px;margin:0 auto 24px;line-height:1.5}
+.ost-dot{width:9px;height:9px;min-width:9px;background:#fff;border-radius:50%;animation:ostp 1.6s infinite}
+@keyframes ostp{0%{box-shadow:0 0 0 0 #ffffffb3}70%{box-shadow:0 0 0 8px #fff0}100%{box-shadow:0 0 0 0 #fff0}}
+.ost-w{position:relative;display:flex;justify-content:space-between;align-items:flex-start;margin:6px 0 18px}
+.ost-l{position:absolute;top:28px;left:16%;right:16%;height:4px;background:linear-gradient(to left,#22c55e 0,#22c55e 50%,#e2e8f0 50%);border-radius:2px;z-index:1}
+.ost-s{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
+.ost-c{width:56px;height:56px;border-radius:50%;background:#f8fafc;border:3px solid #cbd5e1;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 4px 12px #0000000d}
+.ost-e{font-size:22px}
+.ost-k{position:absolute;bottom:-2px;right:-2px;background:#16a34a;color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.ost-s.done .ost-c{background:#f1f5f9;border-color:#0284c7}
+.ost-s.act .ost-c{background:#f0fdf4;border-color:#22c55e;box-shadow:0 0 16px #22c55e4d;transform:scale(1.08)}
+.ost-t{font-size:13px;font-weight:800;margin-top:12px;line-height:1.4;padding:0 2px}
+.ost-d{font-size:12px;color:#64748b;margin-top:4px;font-weight:600;direction:ltr}
+.ost-d.hl{color:#d97706;font-weight:800;direction:rtl}
+.ost-f{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:11px 14px;font-size:13px;color:#334155;font-weight:600;line-height:1.7}
+.ost-a{display:inline-block;margin-top:12px;color:var(--primary);font-weight:800;font-size:14px}
+@media(min-width:600px){.ost-c{width:68px;height:68px}.ost-e{font-size:28px}.ost-l{top:34px}.ost-t{font-size:15px}}

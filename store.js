@@ -107,6 +107,7 @@
   function close() { $("ov").hidden = true; $("drawer").hidden = true }
   $("ov").onclick = close; $("dclose").onclick = close; $("cartBtn").onclick = open;
   document.addEventListener("click", e => {
+    const ot = e.target.closest("[data-ostphone]"); if (ot) { try { if (window.__lastPhone) sessionStorage.setItem("trk", window.__lastPhone) } catch (x) {} }
     const a = e.target.closest("[data-add]"); if (a) { let tiers = []; try { tiers = JSON.parse(a.dataset.tiers || "[]") } catch (x) {} const pq = $("pq"); const inPage = a.closest(".pinfo,.stick"); const base = { id: a.dataset.id, name: a.dataset.name, price: Number(a.dataset.price), image: a.dataset.image, slug: a.dataset.slug, min: parseInt(a.dataset.min) || 1, tiers };
       let vars = []; try { vars = JSON.parse(a.dataset.vars || "[]") } catch (x) {}
       if (vars.length) { const r = document.querySelector("[name=var]:checked"); if (!r) { toast("اختر الخيار الأول"); const v = $("vars"); if (v) v.scrollIntoView({ block: "center" }); return } const v = vars.find(x => x.id === r.value); if (!v) return; base.vid = v.id; base.name = base.name + " - " + v.label; base.price = v.price; add(base, pq && inPage ? pq.value : 0); return }
@@ -128,6 +129,16 @@
   function waShort(no, name, phone, key) { return `طلب جديد رقم #${no}\nالاسم: ${name}\nالموبايل: ${phone}\nالفاتورة PDF: ${location.origin}/api/notify-order?k=${key}` }
   function waCart() { return "عايز أطلب:\n" + cart.map(i => `- ${i.name} × ${i.qty} (${fmt(unitOf(i))} جنيه)`).join("\n") + `\nالمنتجات: ${fmt(sub())} جنيه` }
   function nextTier(i) { const t = (i.tiers || []).filter(t => t[0] > i.qty && t[1] < unitOf(i)).sort((a, b) => a[0] - b[0])[0]; return t ? `<small class="tn">اطلب ${t[0]} قطعة بسعر ${fmt(t[1])} للقطعة</small>` : "" }
+  const OST = { ost_banner: "طلبك قيد المعالجة الآن؛ سيتم الشحن قريبًا.", ost_s1: "تم الشراء الآن", ost_s2: "يتم معالجة طلبك", ost_s3: "تم التوصيل", ost_s3d: "خلال ٣ إلى ٧ أيام عمل", ost_foot: "سيتم التواصل معك هاتفياً أو عبر الواتساب خلال 24 ساعة لتأكيد الشحن." };
+  function ostHtml() {
+    if ((S.ost_on || "1") === "0") return "";
+    const t = k => esc(String(S[k] || "").trim() || OST[k]), d = new Date(), dt = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+    return `<div class="ost"><div class="ost-b"><i class="ost-dot"></i>${t("ost_banner")}</div><div class="ost-w"><div class="ost-l"></div>
+<div class="ost-s done"><div class="ost-c"><span class="ost-e">🛍️</span><span class="ost-k">✓</span></div><div class="ost-t">${t("ost_s1")}</div><div class="ost-d">${dt}</div></div>
+<div class="ost-s act"><div class="ost-c"><span class="ost-e">🚚</span><span class="ost-k">✓</span></div><div class="ost-t">${t("ost_s2")}</div><div class="ost-d">${dt}</div></div>
+<div class="ost-s"><div class="ost-c"><span class="ost-e">📍</span></div><div class="ost-t">${t("ost_s3")}</div><div class="ost-d hl">${t("ost_s3d")}</div></div></div>
+<div class="ost-f"><span>📞</span> ${t("ost_foot")}</div><a class="ost-a" href="/track" data-ostphone>تابع حالة طلبك برقم الموبايل</a></div>`;
+  }
   function view(v) {
     $("dtitle").dataset.v = v; const b = $("dbody");
     if (v === "cart") {
@@ -221,7 +232,7 @@
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
       try { sessionStorage.setItem("trk", phone) } catch (x) {}
-      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
+      $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${(window.__lastPhone = phone, "")}${ostHtml()}${S.order_done_msg ? `<p class="odm">${esc(S.order_done_msg).replace(/\n/g, "<br>")}</p>` : ""}${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
     } catch (err) { fail("تعذر الاتصال، تحقق من الإنترنت أو اطلب عبر واتساب") }
