@@ -159,7 +159,7 @@ ${prev ? `<link rel="prev" href="${esc(b + prev)}">` : ""}${next ? `<link rel="n
 ${ogImg ? `<meta property="og:image" content="${esc(ogImg)}">` : ""}
 <meta name="twitter:card" content="${ogImg ? "summary_large_image" : "summary"}"><meta name="twitter:title" content="${esc(og.title || title)}"><meta name="twitter:description" content="${esc(desc)}">
 ${favicon ? `<link rel="icon" href="${esc(favicon)}">` : ""}
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://vezbhmmufmvgquoujylm.supabase.co" crossorigin><link rel="preconnect" href="https://assets.wuiltstore.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${FONTS[font]}&display=swap">
 <link rel="stylesheet" href="/style.css">
 <style>:root{--primary:${color};--accent:${accent};--font:'${font}';--logo:${logoPx}px${bgc ? `;--bg:${bgc}` : ""}}</style>
