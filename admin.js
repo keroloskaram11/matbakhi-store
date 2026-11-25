@@ -9,7 +9,7 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","كوبونات الخصم"],["settings","الإعدادات"]];
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["reports","التقارير والأرباح"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["settings","الإعدادات"]];
 const V={};let tab="home";
 async function fetchAll(build){let out=[],from=0;for(;;){const {data,error}=await build().range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
 const flash=(id,t,ok)=>{const e=$(id);if(e){e.textContent=t;e.className=ok?"ok":"msg"}};
@@ -461,8 +461,8 @@ V.coupons=async()=>{
  if(error){$("view").innerHTML=`<div class="box msg">تعذر تحميل الكوبونات: ${esc(error.message)}</div>`;return}
  const act=data.filter(c=>c.active).length;
  const desc=c=>c.kind==="percent"?num(c.value)+"%"+(c.max_discount?" (حد أقصى "+fmt(c.max_discount)+" جنيه)":""):fmt(c.value)+" جنيه";
- $("view").innerHTML=`<div class="box"><h3>كوبونات الخصم</h3><p class="hint">${act?`عندك ${act} كود مفعّل، وحقل الكوبون ظاهر للعملاء في صفحة إتمام الطلب.`:"مفيش أي كود مفعّل حالياً، فحقل الكوبون مش ظاهر للعملاء. أي كود تضيفه بيفضل متوقف لحد ما تفعّله."} الخصم بيتحسب على ثمن المنتجات (من غير الشحن) ويظهر في الفاتورة والتيليجرام.</p></div>
- <div class="box" id="cpn"><h3>إضافة كود جديد</h3>
+ $("view").innerHTML=`<div class="box"><h3>العروض وكوبونات الخصم</h3><p class="hint">${act?`عندك ${act} كود مفعّل، وحقل الكوبون ظاهر للعملاء في صفحة إتمام الطلب.`:"مفيش أي كود مفعّل حالياً، فحقل الكوبون مش ظاهر للعملاء. أي كود تضيفه بيفضل متوقف لحد ما تفعّله."} الخصم بيتحسب على ثمن المنتجات (من غير الشحن) ويظهر في الفاتورة والتيليجرام.</p></div>
+ <div class="box" id="cpn"><h3 id="chead">إضافة كود جديد</h3>
   <label>الكود (حروف إنجليزي أو أرقام)</label><input id="cc" dir="ltr" maxlength="30" autocomplete="off">
   <label>نوع الخصم</label><select id="ck"><option value="percent">نسبة %</option><option value="fixed">مبلغ ثابت بالجنيه</option></select>
   <label>قيمة الخصم</label><input id="cv" inputmode="decimal">
@@ -470,17 +470,23 @@ V.coupons=async()=>{
   <label>أقصى خصم بالجنيه (للنسبة فقط، اتركه فارغاً = بدون)</label><input id="cx" inputmode="decimal">
   <label>عدد مرات الاستخدام الكلي (فارغ = بدون حد)</label><input id="cu" inputmode="numeric">
   <label>ينتهي يوم (DD/MM/YYYY، فارغ = بدون)</label>${dIn("ce","")}
-  <label>ملاحظة لنفسك (اختياري)</label><input id="cn" maxlength="120">
-  <label><input type="checkbox" id="ca" style="width:auto"> تفعيل الكود فوراً</label>
-  <button id="cadd">إضافة الكود</button> <span id="cm2"></span></div>
- <div class="box"><h3>الأكواد (${data.length})</h3>${data.length?`<div class="scroll"><table><tr><th>الكود</th><th>الخصم</th><th>الشروط</th><th>استُخدم</th><th>مفعّل</th><th></th></tr>${data.map(c=>`<tr><td dir="ltr"><b>${esc(c.code)}</b>${c.note?`<br><small>${esc(c.note)}</small>`:""}</td><td>${esc(desc(c))}</td><td>${[c.min_subtotal>0?"من "+fmt(c.min_subtotal)+" جنيه":"",c.expires_at?"ينتهي "+dmy(c.expires_at):"",c.max_uses?"حد "+c.max_uses:""].filter(Boolean).join(" - ")||"-"}</td><td>${c.used_count}</td><td><input type="checkbox" class="ctog" data-c="${esc(c.code)}" ${c.active?"checked":""}></td><td><button class="sm red cdel" data-c="${esc(c.code)}">حذف</button></td></tr>`).join("")}</table></div>`:`<p class="hint">لا توجد أكواد.</p>`}</div>`;
+  <label>اسم العرض / ملاحظة لنفسك (اختياري)</label><input id="cn" maxlength="120">
+  <label><input type="checkbox" id="ca" style="width:auto"> تفعيل الكود</label>
+  <button id="cadd">إضافة الكود</button> <button id="ccancel" class="gray" type="button" hidden>إلغاء التعديل</button> <span id="cm2"></span></div>
+ <div class="box"><h3>الأكواد (${data.length})</h3>${data.length?`<div class="scroll"><table><tr><th>الكود</th><th>الخصم</th><th>الشروط</th><th>استُخدم</th><th>مفعّل</th><th></th></tr>${data.map(c=>`<tr><td dir="ltr"><b>${esc(c.code)}</b>${c.note?`<br><small>${esc(c.note)}</small>`:""}</td><td>${esc(desc(c))}</td><td>${[c.min_subtotal>0?"من "+fmt(c.min_subtotal)+" جنيه":"",c.expires_at?"ينتهي "+dmy(c.expires_at):"",c.max_uses?"حد "+c.max_uses:""].filter(Boolean).join(" - ")||"-"}</td><td>${c.used_count}</td><td><input type="checkbox" class="ctog" data-c="${esc(c.code)}" ${c.active?"checked":""}></td><td><button class="sm gray cedit" data-c="${esc(c.code)}">تعديل</button> <button class="sm red cdel" data-c="${esc(c.code)}">حذف</button></td></tr>`).join("")}</table></div>`:`<p class="hint">لا توجد أكواد.</p>`}</div>`;
+ let editing=null;
+ const fillForm=c=>{editing=c?c.code:null;$("cc").value=c?c.code:"";$("cc").disabled=!!c;$("ck").value=c?c.kind:"percent";$("cv").value=c?num(c.value):"";$("cm").value=c?num(c.min_subtotal):"0";$("cx").value=c&&c.max_discount?num(c.max_discount):"";$("cu").value=c&&c.max_uses?c.max_uses:"";$("ce").value=c&&c.expires_at?dmy(c.expires_at):"";$("cn").value=c&&c.note?c.note:"";$("ca").checked=!!(c&&c.active);$("chead").textContent=c?"تعديل الكود "+c.code:"إضافة كود جديد";$("cadd").textContent=c?"حفظ التعديل":"إضافة الكود";$("ccancel").hidden=!c;flash("cm2","",true)};
+ $("ccancel").onclick=()=>fillForm(null);
+ document.querySelectorAll(".cedit").forEach(x=>x.onclick=()=>{fillForm(data.find(c=>c.code===x.dataset.c));$("cpn").scrollIntoView({behavior:"smooth"})});
  $("cadd").onclick=async()=>{
   const code=$("cc").value.trim().toUpperCase(),kind=$("ck").value,val=num($("cv").value);
-  if(!/^[A-Z0-9_-]{3,30}$/.test(code))return flash("cm2","الكود لازم 3 حروف أو أرقام إنجليزي على الأقل");
+  if(!editing&&!/^[A-Z0-9_-]{3,30}$/.test(code))return flash("cm2","الكود لازم 3 حروف أو أرقام إنجليزي على الأقل");
   if(!(val>0)||(kind==="percent"&&val>100))return flash("cm2","اكتب قيمة خصم صحيحة");
   let exp=null;if($("ce").value.trim()){const d=pdmy($("ce").value);if(!d)return flash("cm2","تاريخ الانتهاء غير صحيح");exp=new Date(d+"T23:59:59+02:00").toISOString()}
   const row={code,kind,value:val,min_subtotal:Math.max(0,num($("cm").value)),max_discount:kind==="percent"&&num($("cx").value)>0?num($("cx").value):null,max_uses:num($("cu").value)>0?Math.floor(num($("cu").value)):null,expires_at:exp,active:$("ca").checked,note:$("cn").value.trim()||null};
-  flash("cm2","جاري الحفظ...",true);const {error}=await sb.from("coupons").insert(row);
+  flash("cm2","جاري الحفظ...",true);
+  if(editing){const {code:_c,...upd}=row;const {error:e2}=await sb.from("coupons").update(upd).eq("code",editing);if(e2)return flash("cm2","خطأ: "+e2.message);return V.coupons()}
+  const {error}=await sb.from("coupons").insert(row);
   if(error)return flash("cm2",/duplicate/.test(error.message)?"الكود موجود بالفعل":"خطأ: "+error.message);V.coupons()};
  document.querySelectorAll(".ctog").forEach(x=>x.onchange=async()=>{const {error}=await sb.from("coupons").update({active:x.checked}).eq("code",x.dataset.c);if(error){alert("خطأ: "+error.message)}V.coupons()});
  document.querySelectorAll(".cdel").forEach(x=>x.onclick=async()=>{if(!confirm("حذف الكود "+x.dataset.c+"؟"))return;const {error}=await sb.from("coupons").delete().eq("code",x.dataset.c);if(error)alert("خطأ: "+error.message);V.coupons()});
