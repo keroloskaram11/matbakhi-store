@@ -50,7 +50,6 @@
   const unitOf = i => unit(i, i.qty);
   let varIds = null; const loadVarIds = () => (varIds = varIds || fetch(window.SUPABASE_URL + "/rest/v1/product_variants?select=product_id", { headers: { apikey: window.SUPABASE_KEY } }).then(r => r.json()).then(j => new Set(Array.isArray(j) ? j.map(x => x.product_id) : [])).catch(() => new Set()));
   setTimeout(loadVarIds, 800);
-  if ($("hform")) $("hform").onsubmit = e => { e.preventDefault(); const no = ($("hno").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""), ph = ($("hph").value || "").trim(); if (!no || ph.length < 8) { $("herr").textContent = "اكتب رقم الطلب ورقم الموبايل"; return } try { sessionStorage.setItem("trk", JSON.stringify({ no, ph })) } catch (x) {} location.href = "/track" };
   document.addEventListener("change", e => { const r = e.target.closest && e.target.closest("[name=var]"); if (!r) return; const p = r.dataset.price; document.querySelectorAll(".pinfo .pr .price,.stick .price").forEach(el => el.textContent = Number(p).toLocaleString("en-US") + " جنيه"); const o = document.querySelector(".pinfo .pr .old"); if (o) o.textContent = r.dataset.old ? Number(r.dataset.old).toLocaleString("en-US") : "" });
   const sub = () => cart.reduce((a, i) => a + i.qty * unitOf(i), 0);
   const freeMin = () => parseFloat(S.free_shipping_min) || 0;
@@ -67,6 +66,43 @@
   /* ---------- UI ---------- */
   document.body.insertAdjacentHTML("beforeend", `<div id="ov" class="ov" hidden></div><aside id="drawer" class="drawer" hidden role="dialog" aria-label="السلة"><div class="dh"><b id="dtitle">سلة المشتريات</b><button class="gray sm" id="dclose">إغلاق</button></div><div id="dbody"></div></aside><div id="bar" class="bar" hidden></div>`);
   const fab = $("fab"); if (fab) fab.href = wa("");
+  /* ---- order tracking by phone ---- */
+  function trkUI(root, auto) {
+    const E = x => String(x).replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+    const PAY = { pending: "بانتظار تأكيد الدفع", paid: "تم تأكيد الدفع", cod: "الدفع عند الاستلام" };
+    const dmy = iso => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear() };
+    let last = ""; try { last = localStorage.getItem("tph") || "" } catch (x) {}
+    root.innerHTML = '<p class="lead">اكتب رقم الموبايل اللي سجلت بيه الطلب وهتشوف طلباتك وحالة كل طلب.</p><form class="trkf" novalidate><input type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel" value="' + E(last) + '"><button class="btn" type="submit">عرض طلباتي</button></form><p class="msg trke"></p><div class="trkres"></div>';
+    const f = root.querySelector("form"), inp = f.querySelector("input"), err = root.querySelector(".trke"), res = root.querySelector(".trkres"), btn = f.querySelector("button");
+    const card = (o, steps) => {
+      const si = steps.indexOf(o.status), pay = o.pay === "pending" || o.pay === "paid" ? E(o.method || "تحويل") + " - " + (PAY[o.pay] || "") : PAY.cod;
+      const stepsH = o.cancelled || !steps.length ? "" : '<ol class="trk">' + steps.map((n, i) => '<li class="' + (i <= si ? "on" : "") + '"><span>' + (i <= si ? "&#10003;" : i + 1) + "</span>" + E(n) + "</li>").join("") + "</ol>";
+      const items = (o.items || []).map(x => "<li><span>" + E(x.n) + " &times; " + Number(x.q) + "</span><b>" + Number(x.p * x.q).toLocaleString("en-US") + " جنيه</b></li>").join("");
+      return '<details class="tord"><summary><b>طلب #' + Number(o.no) + '</b><span class="tst" style="background:' + (/^#[0-9a-fA-F]{6}$/.test(o.color || "") ? o.color : "#666") + '">' + E(o.status) + '</span><span class="muted">' + dmy(o.created_at) + " - " + Number(o.total || 0).toLocaleString("en-US") + " جنيه</span></summary>" + stepsH + '<p class="muted"><b>الدفع:</b> ' + pay + '</p><ul class="titems">' + items + '</ul><p><b>الإجمالي شامل الشحن: ' + Number(o.total || 0).toLocaleString("en-US") + " جنيه</b></p></details>";
+    };
+    const run = () => {
+      err.textContent = ""; res.innerHTML = ""; const ph = inp.value.trim();
+      if (ph.replace(/\D/g, "").length < 8) { err.textContent = "اكتب رقم الموبايل"; return }
+      btn.disabled = true; btn.textContent = "جاري البحث...";
+      fetch(window.SUPABASE_URL + "/rest/v1/rpc/track_by_phone", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_phone: ph }) })
+        .then(r => r.json()).then(j => {
+          btn.disabled = false; btn.textContent = "عرض طلباتي";
+          if (!j || !j.ok) { err.textContent = j && j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر عرض الطلبات، حاول تاني"; return }
+          try { localStorage.setItem("tph", ph) } catch (x) {}
+          res.innerHTML = j.orders.map(o => card(o, j.steps || [])).join("");
+          const d = res.querySelector("details"); if (d && j.orders.length === 1) d.open = true;
+        }).catch(() => { btn.disabled = false; btn.textContent = "عرض طلباتي"; err.textContent = "تعذر الاتصال، حاول تاني" });
+    };
+    f.onsubmit = e => { e.preventDefault(); run() };
+    if (auto) run();
+  }
+  if ($("trkpage")) { let a = ""; try { a = sessionStorage.getItem("trk") || ""; sessionStorage.removeItem("trk"); if (a) localStorage.setItem("tph", a) } catch (x) {} trkUI($("trkpage"), !!a) }
+  if ($("trkfab")) $("trkfab").onclick = () => {
+    if (location.pathname === "/track") { scrollTo(0, 0); return }
+    let m = $("trkm");
+    if (!m) { m = document.createElement("div"); m.id = "trkm"; m.className = "trkm"; m.innerHTML = '<div class="trkp" role="dialog" aria-label="تتبع طلبك"><button class="trkx" type="button" aria-label="إغلاق">&times;</button><h3>تتبع طلبك</h3><div class="trkb"></div></div>'; document.body.appendChild(m); trkUI(m.querySelector(".trkb"), false); m.onclick = e => { if (e.target === m || e.target.closest(".trkx")) m.hidden = true } }
+    m.hidden = false; const i = m.querySelector("input"); if (i) i.focus();
+  };
   function open() { $("ov").hidden = false; $("drawer").hidden = false; view("cart") }
   function close() { $("ov").hidden = true; $("drawer").hidden = true }
   $("ov").onclick = close; $("dclose").onclick = close; $("cartBtn").onclick = open;
@@ -182,6 +218,7 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return fail(j.message && /[\u0600-\u06FF]/.test(j.message) ? j.message : "تعذر إرسال الطلب، حاول مرة أخرى أو اطلب عبر واتساب");
       const okey = key; const wasWa = waMode; waMode = false; coupon = null; proofPath = null; sessionStorage.removeItem("ckey"); cart = []; save(); render(); view("done");
+      try { sessionStorage.setItem("trk", phone) } catch (x) {}
       $("dbody").innerHTML = `<div class="done"><div class="tick">&#10003;</div><h3>شكراً ${esc(name)}!</h3>${j.order_no ? `<p>رقم طلبك: <b>#${esc(j.order_no)}</b></p>` : ""}<p>${j.payment_status === "pending" ? `المطلوب تحويله: <b>${fmt(j.total)} جنيه</b>` : `الإجمالي: <b>${fmt(j.total)} جنيه</b> (الدفع عند الاستلام)`}</p>${j.payment_status === "pending" ? `<p>طلبك مسجل <b>بانتظار تأكيد الدفع</b>. هنراجع التحويل ونتواصل معاك.</p>` : ""}<p>سنتواصل معك على ${esc(phone)} لتأكيد الطلب.</p>${j.order_no ? `<p><a href="/track">تابع حالة طلبك</a></p>` : ""}${wasWa && j.order_no ? `<a class="btn full wa2" id="dwa" target="_blank" rel="noopener" href="${esc(wa(waShort(j.order_no, name, phone, okey)))}">ابعت الطلب والفاتورة على واتساب</a>` : ""}<button class="btn full" id="dok">متابعة التسوق</button></div>`;
       $("dok").onclick = close;
       if (j.order_no !== 0) track("Purchase", { value: Number(j.total), order_no: j.order_no, items: snapshot });
