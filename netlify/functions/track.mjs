@@ -31,7 +31,7 @@ $("tf").onsubmit=function(e){e.preventDefault();var err=$("terr"),res=$("tres"),
   var it=(j.items||[]);if(it.length)html+='<h4>تفاصيل الطلب</h4><ul class="titems">'+it.map(function(x){return '<li><span>'+E(x.n)+(Number(x.p)>=0?' &times; '+Number(x.q):'')+'</span><b>'+Number(x.p*x.q).toLocaleString("en-US")+' جنيه</b></li>'}).join("")+'</ul><p><b>الإجمالي شامل الشحن: '+Number(j.total||0).toLocaleString("en-US")+' جنيه</b></p>';
   if(!cancelled)html+='<ol class="trk">'+STEPS.map(function(s,i){return '<li class="'+(i<=step?"on":"")+'"><span>'+(i<=step?"&#10003;":i+1)+'</span>'+s[1]+'</li>'}).join("")+'</ol>';
   res.innerHTML=html;res.hidden=false}).catch(function(){b.disabled=false;b.textContent="عرض حالة الطلب";err.textContent="تعذر الاتصال، حاول تاني"})};
-try{var q=JSON.parse(sessionStorage.getItem("trk")||"null");sessionStorage.removeItem("trk");if(q&&q.no&&q.ph){$("tno").value=q.no;$("tph").value=q.ph;$("tf").dispatchEvent(new Event("submit",{cancelable:true}))}}catch(x){}
+window.addEventListener("load",function(){try{var q=JSON.parse(sessionStorage.getItem("trk")||"null");sessionStorage.removeItem("trk");if(q&&q.no&&q.ph){$("tno").value=q.no;$("tph").value=q.ph;$("tf").dispatchEvent(new Event("submit",{cancelable:true}))}}catch(x){}});
 })();</script>`;
     return L.send(L.layout({ req, S, cats, zonesList: Z, title: `تتبع طلبك | ${name}`, desc: L.cut(`تابع حالة طلبك من ${name} برقم الطلب ورقم الموبايل.`, 160), path: "/track", robots: "noindex,follow", body: { main } }));
   } catch (e) { return L.fail(e) }
