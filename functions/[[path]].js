@@ -7,6 +7,19 @@ import robots from "../netlify/functions/robots.mjs";
 import llms from "../netlify/functions/llms.mjs";
 
 export const onRequest = async (c) => {
+  const u0 = new URL(c.request.url);
+  const cacheable = c.request.method === "GET" && !u0.search && !/^\/(api|admin)/.test(u0.pathname);
+  const ck = cacheable ? new Request(u0.origin + u0.pathname, { method: "GET" }) : null;
+  if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
+  const res = await handle(c);
+  if (ck && res.status === 200 && (res.headers.get("content-type") || "").includes("text/html") && /^\/($|products|c\/|p\/|wholesale)/.test(u0.pathname)) {
+    const out = new Response(res.body, res); out.headers.set("Cache-Control", "public, max-age=60, s-maxage=300"); out.headers.delete("netlify-cdn-cache-control");
+    c.waitUntil(caches.default.put(ck, out.clone())); return out;
+  }
+  return res;
+};
+
+const handle = async (c) => {
   const p = new URL(c.request.url).pathname.replace(/\/+$/, "") || "/";
   if (p === "/google9e1317c29e841629.html") return new Response("google-site-verification: google9e1317c29e841629.html", { headers: { "content-type": "text/html; charset=utf-8" } });
   let h = null;
