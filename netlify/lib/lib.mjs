@@ -121,6 +121,15 @@ const introHtml = S => {
   const t = String(S.intro_text === undefined ? INTRO_DEFAULT : S.intro_text).trim().slice(0, 400);
   return t ? `<section class="intro" aria-label="نبذة"><span class="ib b1"></span><span class="ib b2"></span><span class="ib b3"></span><p>${esc(t)}</p></section>` : "";
 };
+const chatsHtml = S => {
+  if (S.chats_on === "0") return "";
+  let a = []; try { a = JSON.parse(S.chats || "[]") } catch (e) {}
+  a = (Array.isArray(a) ? a : []).map(c => (Array.isArray(c && c.msgs) ? c.msgs : []).map(m => ({ d: m && m.d === "out" ? "out" : "in", t: String((m && m.t) || "").trim().slice(0, 600), tm: String((m && m.tm) || "").trim().slice(0, 12) })).filter(m => m.t)).filter(c => c.length).slice(0, 30);
+  if (!a.length) return "";
+  const title = String(S.chats_title === undefined ? "من محادثات عملاء مطبخي بالجملة" : S.chats_title).trim().slice(0, 100), sub = String(S.chats_sub === undefined ? "آراء وانطباعات حقيقية لعملاء بعد استلام أوردراتهم (اسحب لرؤية المزيد)" : S.chats_sub).trim().slice(0, 160);
+  const brand = "مطبخي بالجملة", th = esc(title).replace(brand, `<span>${brand}</span>`);
+  return `<section class="wch" aria-label="${esc(title)}">${title ? `<h2 class="sec">&#128172; ${th}</h2>` : ""}${sub ? `<p class="lead">${esc(sub)}</p>` : ""}<div class="wch-w"><button class="wch-b" data-d="r" type="button" aria-label="السابق">&#10094;</button><div class="wch-c" tabindex="0">${a.map(c => `<div class="wch-box"><span class="wch-ok">عميل موثّق &#10003;</span>${c.map(m => `<div class="wch-m ${m.d}"><div class="wch-t">${esc(m.t).replace(/\n/g, "<br>")}</div>${m.tm ? `<span class="wch-tm">${esc(m.tm)}</span>` : ""}</div>`).join("")}</div>`).join("")}</div><button class="wch-b" data-d="l" type="button" aria-label="التالي">&#10095;</button></div></section>`;
+};
 const reviewsHtml = S => {
   let a = []; try { a = JSON.parse(S.reviews || "[]") } catch (e) {}
   a = (Array.isArray(a) ? a : []).map(x => ({ img: safeUrl(x && x.img) && /^https:/i.test(x.img) ? x.img : "", name: String((x && x.name) || "").trim().slice(0, 60), text: String((x && x.text) || "").trim().slice(0, 500) })).filter(x => x.img || x.text).slice(0, 20);
@@ -199,4 +208,4 @@ function fail(e) { console.error(e); return send(`<!DOCTYPE html><html lang="ar"
 function notFound(req, S, cats, what) {
   return send( layout({ req, S, cats, title: "الصفحة غير موجودة | " + (S.store_name || ""), desc: "الصفحة غير موجودة", path: new URL(req.url).pathname, robots: "noindex", body: { main: `<div class="empty"><h1>${esc(what)} غير موجود</h1><p><a class="btn" href="/">الرجوع للرئيسية</a></p></div>` } }), "public, s-maxage=60", null, 404);
 }
-export { introHtml, reviewsHtml, heroSliderHtml, tickerHtml, imagesOf, descHtml, toText, socialHtml, params, zones, tiersFor, cardsHtml, trustHtml, rest, settings, categories, PCOLS, esc, fmt, safeUrl, baseUrl, pUrl, cUrl, price, isSale, card, layout, send, orgLd, crumbLd, crumbHtml, cut, fail, notFound, dec, jsonLd, SUPABASE_URL };
+export { introHtml, reviewsHtml, chatsHtml, heroSliderHtml, tickerHtml, imagesOf, descHtml, toText, socialHtml, params, zones, tiersFor, cardsHtml, trustHtml, rest, settings, categories, PCOLS, esc, fmt, safeUrl, baseUrl, pUrl, cUrl, price, isSale, card, layout, send, orgLd, crumbLd, crumbHtml, cut, fail, notFound, dec, jsonLd, SUPABASE_URL };
