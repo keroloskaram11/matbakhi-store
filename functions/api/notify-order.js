@@ -92,3 +92,20 @@ export const onRequestPost = async ({ request, env }) => {
   const tr = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendDocument`, { method: "POST", body: fd });
   return new Response(JSON.stringify({ ok: tr.ok, status: tr.status, bytes: pdf.byteLength }), { status: tr.ok ? 200 : 502, headers: { "content-type": "application/json" } });
 };
+
+// GET /api/notify-order?k=<order key>: public invoice PDF for the customer's own order (key is the random id made in their browser).
+export const onRequestGet = async ({ request, env }) => {
+  const k = new URL(request.url).searchParams.get("k") || "";
+  if (k.length < 8 || k.length > 80) return new Response("not found", { status: 404 });
+  const H = { apikey: KEY, "Content-Type": "application/json" };
+  const r = await (await fetch(`${SB}/rpc/invoice_by_key`, { method: "POST", headers: H, body: JSON.stringify({ p_key: k }) })).json().catch(() => null);
+  if (!r || !r.order || !(r.items || []).length) return new Response("not found", { status: 404 });
+  const rows = await (await fetch(`${SB}/settings?select=key,value`, { headers: { apikey: KEY } })).json().catch(() => []);
+  const st = Object.fromEntries((rows || []).map(x => [x.key, x.value]));
+  const pr = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/browser-run/pdf`, {
+    method: "POST", headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ html: invoiceHtml(r.order, r.items.slice(0, 30), st), gotoOptions: { waitUntil: "networkidle0", timeout: 20000 }, pdfOptions: { format: "a4", printBackground: true, preferCSSPageSize: true } })
+  });
+  if (!pr.ok) return new Response("try again", { status: 502 });
+  return new Response(await pr.arrayBuffer(), { headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="invoice-${r.order.order_no}.pdf"`, "cache-control": "private, max-age=600", "x-robots-tag": "noindex" } });
+};
