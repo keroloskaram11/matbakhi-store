@@ -32,6 +32,7 @@ function impAnalyze(){
   if(!title){const dup=handle&&seen.has(handle);if(dup){it.action="skip";it.warnings.push("صف إضافي لنفس المنتج (خيارات/variants) تم تجاهله");return}it.errors.push("الاسم (Title) فارغ")}
   const key=handle||title;if(seen.has(key)&&title){it.action="skip";it.warnings.push("مكرر داخل الملف (نفس الـ Handle)، استُخدم أول صف");return}seen.set(key,1);
   const price=toNum(g(r,"price"));if(isNaN(price)||price<=0)it.errors.push("السعر غير صحيح: "+(g(r,"price")||"فارغ"));
+  if(!isNaN(price)&&price>0&&price<=1)it.warnings.push("السعر "+price+" جنيه فقط، تأكد أنه صحيح في الملف");
   let sale=toNum(g(r,"sale"));if(isNaN(sale)||sale<=0)sale=null;else if(sale>=price){it.warnings.push("سعر الخصم أكبر من أو يساوي السعر، تم تجاهله");sale=null}
   let cost=toNum(g(r,"cost"));if(isNaN(cost)||cost<0)cost=null;
   const imgs=g(r,"images").split(/\s+/).filter(Boolean),good=imgs.filter(u=>/^https:\/\//i.test(u));
@@ -76,6 +77,7 @@ function impDraw(){
  const used=Object.entries(x.catCount).map(([k,n])=>{const nm=k.startsWith("new:")?k.slice(4)+" (جديد)":(D.cats.find(c=>"cat:"+c.id===k)||{}).name;return `${esc(nm)}: ${n}`}).join(" | ");
  const shown=x.items.filter(i=>i.action!=="skip"||i.warnings.length).filter(i=>i.errors.length||i.warnings.length).slice(0,60);
  b.innerHTML=`<div class="box"><h3>ملخص الملف: ${esc(x.fname)}</h3><div class="stat"><div>صفوف<b>${x.items.length}</b></div><div>منتجات جديدة<b>${nNew}</b></div><div>تحديث<b>${nUp}</b></div><div>تخطي<b>${nSk}</b></div><div>أخطاء (لن تُستورد)<b style="color:#c0392b">${nEr}</b></div><div>تحذيرات<b>${nW}</b></div></div>
+ ${(()=>{const lo=x.items.filter(i=>i.price>0&&i.price<=1&&i.action!=="error").length;return lo?`<p class="msg">تنبيه: ${lo} منتج سعره 1 جنيه أو أقل في الملف. لو ده غلط في ملف Wuilt، صحّحه قبل الاستيراد أو عدّل الأسعار بعده.</p>`:""})()}
  <p class="hint">المنتج في المتجر ليه قسم واحد فقط: بنختار أول قسم في خانة Collections مش متجاهَل. الوصف بيتنضّف من الأكواد الخطيرة، والصور بتُستخدم كروابطها (بدون تنزيل). الحالة DRAFT بتُستورد مخفية. الكمية "Available" معناها متوفر.</p></div>
  ${colls.length?`<div class="box"><h3>الأقسام (Collections)</h3><p class="hint">عدّل لكل اسم: إنشاء قسم، ربطه بقسم موجود، أو تجاهله. النتيجة: ${used||"بدون أقسام"}</p><div class="scroll"><table><tr><th>الاسم في الملف</th><th>عدد المنتجات</th><th>الإجراء</th></tr>${colls.map(([n,c],i)=>`<tr><td>${esc(n)}</td><td>${c}</td><td><select data-cm="${i}">${catOpts(n)}</select></td></tr>`).join("")}</table></div></div>`:""}
  ${shown.length?`<div class="box"><h3>أخطاء وتحذيرات (أول ${shown.length})</h3><div class="scroll"><table><tr><th>سطر</th><th>المنتج</th><th>ملاحظات</th></tr>${shown.map(i=>`<tr><td>${i.line}</td><td>${esc(i.title||i.handle||"-")}</td><td>${i.errors.map(e=>`<span style="color:#c0392b">${esc(e)}</span>`).concat(i.warnings.map(esc)).join("<br>")}</td></tr>`).join("")}</table></div></div>`:""}
