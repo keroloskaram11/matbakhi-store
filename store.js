@@ -290,7 +290,7 @@
     loading = (async () => {
       const H = { apikey: window.SUPABASE_KEY }; let out = [];
       for (let from = 0; ; from += 1000) {
-        const r = await fetch(window.SUPABASE_URL + "/rest/v1/products?select=id,name,slug,price,sale_price,image_url,in_stock,min_order_qty&active=eq.true&order=created_at.desc", { headers: { ...H, Range: from + "-" + (from + 999) } });
+        const r = await fetch(window.SUPABASE_URL + "/rest/v1/products?select=id,name,slug,price,sale_price,image_url,in_stock,min_order_qty&listed=eq.true&order=created_at.desc", { headers: { ...H, Range: from + "-" + (from + 999) } });
         const d = await r.json(); if (!Array.isArray(d)) break; out = out.concat(d); if (d.length < 1000) break }
       try { const r = await fetch(window.SUPABASE_URL + "/rest/v1/product_price_tiers?select=product_id,min_qty,unit_price&order=min_qty.asc", { headers: H }); (await r.json()).forEach(t => (tiersAll[t.product_id] = tiersAll[t.product_id] || []).push([t.min_qty, +t.unit_price])) } catch (e) {}
       out.forEach(p => (p._n = norm(p.name))); all = out })();
