@@ -1,9 +1,9 @@
 :root{--primary:#7a3e1d;--accent:#25a244;--bg:#faf7f2;--ink:#222;--card:#fff;--line:#eee}
 *{box-sizing:border-box}
-body{font-family:'Cairo',Tahoma,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+body{font-family:var(--font,'Cairo'),Tahoma,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
 a{color:inherit}
 header.top{background:var(--primary);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px #0003}
-header.top img{height:40px;width:40px;border-radius:50%;object-fit:cover;background:#fff}
+header.top img{height:var(--logo,40px);width:var(--logo,40px);border-radius:50%;object-fit:cover;background:#fff}
 header.top .name{font-size:20px;font-weight:700;flex:1}
 header.top a.wa{background:var(--accent);color:#fff;text-decoration:none;padding:7px 14px;border-radius:20px;font-size:14px;white-space:nowrap}
 .hero{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;padding:36px 18px;text-align:center;background-size:cover;background-position:center;position:relative}
@@ -153,3 +153,60 @@ footer .fl a{color:var(--primary)}.rp{text-align:right;max-width:600px;margin:8p
 @media(max-width:380px){.card h3{font-size:12.5px}.card .price{font-size:14px}.card .in{padding:6px 6px 7px}}
 /* product page on small screens */
 @media(max-width:759px){.pimg img{aspect-ratio:1/1;max-height:min(100vw,440px)}.pinfo h1{font-size:19px;line-height:1.4}.pr.big .price{font-size:23px}.thumbs{margin-top:6px}body{padding-bottom:70px}}
+
+/* ---- hero slider ---- */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hs{position:relative;overflow:hidden;background:#eee}
+.hs-track{position:relative;width:100%;touch-action:pan-y}
+.hs-slide{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;pointer-events:none}
+.hs-slide.on{opacity:1;pointer-events:auto;z-index:1}
+.hs-slide img{width:100%;height:100%;object-fit:cover;display:block}
+.hs-btns{position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:0 12px}
+.hs-btn{background:#fff;color:var(--primary);font-weight:700;font-size:14px;padding:8px 20px;border-radius:22px;text-decoration:none;box-shadow:0 2px 8px #0003}
+.hs-btn.b2{background:var(--accent);color:#fff}
+.hs-dots{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:7px;z-index:3}
+.hs-dots button{width:8px;height:8px;padding:0;border-radius:50%;background:#fff;opacity:.55;border:0;min-width:0}
+.hs-dots button.on{opacity:1;width:20px;border-radius:6px}
+@media(min-width:760px){.hs-btn{font-size:16px;padding:10px 28px}.hs-btns{bottom:40px}}
+
+/* ---- announcement ticker ---- */
+.tk{background:var(--tkbg,var(--primary));color:var(--tkfg,#fff);overflow:hidden;font-size:14px;line-height:1;direction:rtl}
+.tk-t{display:flex;width:max-content;animation:tkm var(--tks,20s) linear infinite}
+.tk-g{display:flex;flex-shrink:0;min-width:100vw}
+.tk-i{padding:10px 28px;white-space:nowrap;position:relative}
+.tk-i::after{content:"\2022";position:absolute;inset-inline-end:-3px;opacity:.6}
+.tk:hover .tk-t,.tk:active .tk-t{animation-play-state:paused}
+@keyframes tkm{from{transform:translateX(0)}to{transform:translateX(50%)}}
+@media(prefers-reduced-motion:reduce){.tk-t{animation:none;width:auto;overflow-x:auto}.tk-g[aria-hidden]{display:none}}
+
+/* ---- hero: taller on phones ---- */
+.hs-track{aspect-ratio:1/1;max-height:76vh}
+@media(min-width:760px){.hs-track{aspect-ratio:21/8;max-height:460px}}
+.hs-slide picture{display:block;width:100%;height:100%}
+/* ---- intro band ---- */
+.intro{position:relative;overflow:hidden;text-align:center;color:#fff;padding:26px 20px;background:linear-gradient(120deg,var(--primary),#f59e0b,var(--accent),#ec4899,var(--primary));background-size:300% 300%;animation:ibg 14s ease infinite}
+.intro p{position:relative;z-index:1;margin:0 auto;max-width:760px;font-size:17px;line-height:1.9;font-weight:600;text-shadow:0 1px 6px #0004;animation:ibup .9s ease both}
+.ib{position:absolute;border-radius:50%;background:#ffffff26;animation:ibf 9s ease-in-out infinite}
+.ib.b1{width:120px;height:120px;top:-40px;right:6%}.ib.b2{width:80px;height:80px;bottom:-26px;left:12%;animation-delay:-3s}.ib.b3{width:46px;height:46px;top:30%;left:46%;animation-delay:-6s}
+@keyframes ibg{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
+@keyframes ibup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ibf{0%,100%{transform:translateY(0)}50%{transform:translateY(14px)}}
+@media(min-width:760px){.intro{padding:34px 20px}.intro p{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.intro,.intro p,.ib{animation:none}}
+/* ---- customer reviews ---- */
+.rv-row{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 12px;-webkit-overflow-scrolling:touch}
+.rv-c{flex:0 0 72%;max-width:300px;margin:0;scroll-snap-align:center;background:#fff;border:1px solid var(--line,#eee);border-radius:14px;overflow:hidden;box-shadow:0 1px 6px #0001}
+@media(min-width:760px){.rv-c{flex-basis:260px}}
+.rv-c img{display:block;width:100%;height:auto;max-height:420px;object-fit:contain;background:#f5f5f5}
+.rv-c blockquote{margin:0;padding:12px 14px;font-size:15px;line-height:1.8;color:#333}
+.rv-c figcaption{padding:0 14px 12px;font-size:13px;color:#777;font-weight:700}
+/* ---- category product sections ---- */
+.csec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.csec-m{font-size:14px;color:var(--primary);font-weight:700;text-decoration:none}
+.intro{border-radius:14px;margin:12px 0}.rv-row{align-items:flex-start}
+
+/* ---- product display options (set from the dashboard) ---- */
+@media(max-width:599px){body.pc1 .grid{grid-template-columns:1fr}}
+body.cimg-tall .card .imgl img,body.cimg-tall .card .ph{aspect-ratio:4/5;height:auto;object-fit:cover}
+body.nobadge .card .badge:not(.gr){display:none}
+body.notier .card .tierhint{display:none}
+body.cr-l .card{border-radius:22px;overflow:hidden}body.cr-s .card{border-radius:4px;overflow:hidden}
