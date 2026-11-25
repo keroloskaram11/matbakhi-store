@@ -88,7 +88,7 @@ V.payments=async function(){const v=$("view");v.innerHTML='<div class="box skel"
  v.querySelectorAll("[data-rf]").forEach(b=>b.onclick=async()=>{const left=Number(b.dataset.left),a=Number(String(prompt("المبلغ المراد رده (جنيه). الحد الأقصى "+left+":",left)||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));if(!(a>0))return;if(!confirm("تأكيد رد "+a+" جنيه للعميل؟ العملية مش بترجع."))return;b.disabled=true;
   try{const {data}=await sb.auth.getSession();const r=await fetch("/api/pay/refund",{method:"POST",headers:{Authorization:"Bearer "+data.session.access_token,"Content-Type":"application/json"},body:JSON.stringify({payment_id:b.dataset.rf,amount:a})});const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);toast("تم رد المبلغ");V.payments()}catch(e){alert(e.message);b.disabled=false}});
 };
-V.wallet=async function(){const v=$("view");v.innerHTML="جاري التحميل...";
+V.wallet=async function(){const v=$("view");v.innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  const [a,b,c]=await Promise.all([sb.rpc("admin_vouchers"),sb.rpc("admin_wallet_all"),sb.rpc("admin_accounts",{p_q:null})]);
  if(a.error){v.innerHTML='<div class="box msg">'+esc(a.error.message)+'</div>';return}
  const vs=a.data||[],led=b.data||[],accs=c.data||[],K={topup:"شحن",refund:"استرجاع",adjust:"تعديل",spend:"دفع طلب"};
@@ -104,7 +104,7 @@ V.wallet=async function(){const v=$("view");v.innerHTML="جاري التحميل
  v.querySelectorAll("[data-vt]").forEach(b=>b.onclick=async()=>{const {error}=await sb.rpc("admin_voucher_toggle",{p_id:b.dataset.vt,p_active:b.dataset.on==="1"});if(error)return alert(error.message);V.wallet()});
 };
 
-V.staff=async function(){const v=$("view");v.innerHTML="جاري التحميل...";const {data,error}=await sb.rpc("staff_list");if(error){v.innerHTML='<div class="box msg">'+esc(error.message)+'</div>';return}
+V.staff=async function(){const v=$("view");v.innerHTML='<div class="box skel"></div><div class="box skel"></div>';const {data,error}=await sb.rpc("staff_list");if(error){v.innerHTML='<div class="box msg">'+esc(error.message)+'</div>';return}
  const lab={none:"ممنوع",read:"قراءة",full:"كامل"};
  const sel=(a,c)=>`<label style="display:flex;justify-content:space-between;gap:8px;margin:4px 0"><span>${a[1]}</span><select data-a="${a[0]}">${["none","read","full"].map(x=>`<option value="${x}" ${x===(c||"none")?"selected":""}>${lab[x]}</option>`).join("")}</select></label>`;
  const rows=(data||[]).map(s=>`<div class="box" data-sid="${s.id}"><b>${esc(s.name||s.email)}</b> <small>${esc(s.email)}</small><br><small>${s.joined?"✅ فعّل حسابه":"⏳ لسه ما فعّلش (محتاج كود الدعوة)"}</small><div class="pg">${AREAS.map(a=>sel(a,(s.perms||{})[a[0]])).join("")}</div><button data-save>حفظ الصلاحيات</button> <button data-inv>كود دعوة جديد</button> <button data-del style="background:#c0392b">حذف</button><div class="icode"></div></div>`).join("");
@@ -117,7 +117,7 @@ V.staff=async function(){const v=$("view");v.innerHTML="جاري التحميل.
 
 async function start(){
  const {data}=await sb.auth.getSession();if(!data.session)return;
- $("login").style.display="none";$("app").style.display="flex";$("view").innerHTML="جاري التحميل...";
+ $("login").style.display="none";$("app").style.display="flex";$("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  try{const {data:mp}=await sb.rpc("my_perms");if(mp)ME={owner:!!mp.owner,perms:mp.perms||{}}}catch(e){}
  try{await loadAll()}catch(e){$("view").innerHTML=`<div class="box msg">تعذر تحميل البيانات: ${esc(e.message)}<br>تأكد أنك دخلت بحساب المدير وأنك شغلت ملفات SQL (المرحلة 1 ثم 2).</div>`;return}
  const h=location.hash.slice(1);go(NAV.some(n=>n[0]===h)?h:"home");
@@ -303,7 +303,7 @@ async function custLoad(){
  (b.data||[]).forEach(x=>{if(!have.has(x.user_id))rows.push({key:"u:"+x.user_id,phone:x.phone||"",name:x.name||x.email,phone2:x.phone2,email:x.email,address:x.address,governorate:x.governorate,orders:0,total_spent:0,last_order:x.created_at,user_id:x.user_id,registered:true,balance:x.balance,items:[]})});
  custData=rows}
 V.customers=async()=>{
- $("view").innerHTML='<div class="box"><p>جاري التحميل...</p></div>';
+ $("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  try{await custLoad()}catch(e){$("view").innerHTML='<div class="box"><p class="msg">تعذر تحميل العملاء: '+esc(e.message||e)+'</p></div>';return}
  custDraw()};
 function custOrders(c){return D.orders.filter(o=>(c.user_id&&o.user_id===c.user_id)||(c.phone&&normPh(o.phone)===normPh(c.phone)))}
@@ -338,7 +338,7 @@ function custDetail(c){
 
 /* ---------- abandoned checkouts ---------- */
 V.abandoned=async()=>{
- $("view").innerHTML="جاري التحميل...";
+ $("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  const {data,error}=await sb.from("abandoned_checkouts").select("*").order("updated_at",{ascending:false}).limit(500);
  if(error){$("view").innerHTML=`<div class="box msg">تعذر التحميل: ${esc(error.message)}</div>`;return}
  const byPh=new Map();D.orders.forEach(o=>{const k=normPh(o.phone);(byPh.get(k)||byPh.set(k,[]).get(k)).push(o)});
@@ -357,7 +357,7 @@ V.abandoned=async()=>{
 /* ---------- analytics ---------- */
 let anDays=30;
 V.analytics=async()=>{
- $("view").innerHTML="جاري التحميل...";
+ $("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  const {data:A,error}=await sb.rpc("admin_analytics",{p_days:anDays});
  if(error){$("view").innerHTML=`<div class="box msg">تعذر التحميل: ${esc(error.message)}</div>`;return}
  const since=new Date(Date.now()-anDays*864e5).toISOString(),ok=o=>(stOf(o.status_id)||{counts_in_profit:true}).counts_in_profit;
@@ -836,7 +836,7 @@ V.shipping=()=>{
 };
 
 V.coupons=async()=>{
- $("view").innerHTML=`<div class="box">جاري التحميل...</div>`;
+ $("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  const {data,error}=await sb.from("coupons").select("*").order("created_at",{ascending:false});
  if(error){$("view").innerHTML=`<div class="box msg">تعذر تحميل الكوبونات: ${esc(error.message)}</div>`;return}
  const act=data.filter(c=>c.active).length;
