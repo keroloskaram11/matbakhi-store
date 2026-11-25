@@ -2,6 +2,7 @@ import home from "../netlify/functions/home.mjs";
 import category from "../netlify/functions/category.mjs";
 import product from "../netlify/functions/product.mjs";
 import wholesale from "../netlify/functions/wholesale.mjs";
+import track from "../netlify/functions/track.mjs";
 import sitemap from "../netlify/functions/sitemap.mjs";
 import robots from "../netlify/functions/robots.mjs";
 import llms from "../netlify/functions/llms.mjs";
@@ -12,7 +13,7 @@ export const onRequest = async (c) => {
   const ck = cacheable ? new Request(u0.origin + u0.pathname, { method: "GET" }) : null;
   if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
   const res = await handle(c);
-  if (ck && res.status === 200 && (res.headers.get("content-type") || "").includes("text/html") && /^\/($|products|c\/|p\/|wholesale)/.test(u0.pathname)) {
+  if (ck && res.status === 200 && (res.headers.get("content-type") || "").includes("text/html") && /^\/($|products|c\/|p\/|wholesale|track)/.test(u0.pathname)) {
     const out = new Response(res.body, res); out.headers.set("Cache-Control", "public, max-age=60, s-maxage=300"); out.headers.delete("netlify-cdn-cache-control");
     c.waitUntil(caches.default.put(ck, out.clone())); return out;
   }
@@ -27,6 +28,7 @@ const handle = async (c) => {
   else if (p === "/products" || p.startsWith("/c/")) h = category;
   else if (p.startsWith("/p/")) h = product;
   else if (p === "/wholesale") h = wholesale;
+  else if (p === "/track") h = track;
   else if (p === "/sitemap.xml") h = sitemap;
   else if (p === "/robots.txt") h = robots;
   else if (p === "/llms.txt") h = llms;
