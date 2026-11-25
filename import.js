@@ -1,4 +1,4 @@
-/* Bulk product import from a CSV file (Wuilt export layout). Runs in the dashboard, uses the admin's own login (RLS),
+/* Bulk product import from a CSV file. Runs in the dashboard, uses the admin's own login (RLS),
    nothing is sent anywhere else. Depends on admin.js globals: D, sb, $, esc, flash, num, V, sanitizeHtml. */
 let impMode=false,IMP=null;
 const MARKETING=/عروض|تخفيض|ترندي|الأكثر|اكثر|خصم|offer|sale|trend|best/i;
@@ -59,7 +59,7 @@ function impAssign(){
 const impCnt=a=>IMP.items.filter(i=>i.action===a).length;
 V.import=()=>{
  const x=IMP;
- $("view").innerHTML=`<div class="box"><h3>استيراد منتجات من ملف CSV (تصدير Wuilt)</h3>
+ $("view").innerHTML=`<div class="box"><h3>استيراد منتجات من ملف CSV</h3>
  <p class="hint">ارفع الملف (CSV بترميز UTF-8). لو الملف Excel: من Excel اختر Save As / حفظ باسم > CSV UTF-8. سيتم عرض معاينة وأخطاء قبل أي إضافة، ولن يُحفظ شيء إلا بعد ضغط "ابدأ الاستيراد".</p>
  <div class="row"><div><label>الملف</label><input id="impf" type="file" accept=".csv,text/csv"></div>
  <div><label>لو المنتج موجود بالفعل (نفس SKU أو الـ Handle)</label><select id="impm"><option value="skip" ${x&&x.mode==="skip"||!x?"selected":""}>تخطي (الأمان)</option><option value="update" ${x&&x.mode==="update"?"selected":""}>تحديث السعر والوصف والصور والحالة</option></select></div></div>
@@ -77,7 +77,7 @@ function impDraw(){
  const used=Object.entries(x.catCount).map(([k,n])=>{const nm=k.startsWith("new:")?k.slice(4)+" (جديد)":(D.cats.find(c=>"cat:"+c.id===k)||{}).name;return `${esc(nm)}: ${n}`}).join(" | ");
  const shown=x.items.filter(i=>i.action!=="skip"||i.warnings.length).filter(i=>i.errors.length||i.warnings.length).slice(0,60);
  b.innerHTML=`<div class="box"><h3>ملخص الملف: ${esc(x.fname)}</h3><div class="stat"><div>صفوف<b>${x.items.length}</b></div><div>منتجات جديدة<b>${nNew}</b></div><div>تحديث<b>${nUp}</b></div><div>تخطي<b>${nSk}</b></div><div>أخطاء (لن تُستورد)<b style="color:#c0392b">${nEr}</b></div><div>تحذيرات<b>${nW}</b></div></div>
- ${(()=>{const lo=x.items.filter(i=>i.price>0&&i.price<=1&&i.action!=="error").length;return lo?`<p class="msg">تنبيه: ${lo} منتج سعره 1 جنيه أو أقل في الملف. لو ده غلط في ملف Wuilt، صحّحه قبل الاستيراد أو عدّل الأسعار بعده.</p>`:""})()}
+ ${(()=>{const lo=x.items.filter(i=>i.price>0&&i.price<=1&&i.action!=="error").length;return lo?`<p class="msg">تنبيه: ${lo} منتج سعره 1 جنيه أو أقل في الملف. لو ده غلط في، صحّحه قبل الاستيراد أو عدّل الأسعار بعده.</p>`:""})()}
  <p class="hint">المنتج في المتجر ليه قسم واحد فقط: بنختار أول قسم في خانة Collections مش متجاهَل. الوصف بيتنضّف من الأكواد الخطيرة، والصور بتُستخدم كروابطها (بدون تنزيل). الحالة DRAFT بتُستورد مخفية. الكمية "Available" معناها متوفر.</p></div>
  ${colls.length?`<div class="box"><h3>الأقسام (Collections)</h3><p class="hint">عدّل لكل اسم: إنشاء قسم، ربطه بقسم موجود، أو تجاهله. النتيجة: ${used||"بدون أقسام"}</p><div class="scroll"><table><tr><th>الاسم في الملف</th><th>عدد المنتجات</th><th>الإجراء</th></tr>${colls.map(([n,c],i)=>`<tr><td>${esc(n)}</td><td>${c}</td><td><select data-cm="${i}">${catOpts(n)}</select></td></tr>`).join("")}</table></div></div>`:""}
  ${shown.length?`<div class="box"><h3>أخطاء وتحذيرات (أول ${shown.length})</h3><div class="scroll"><table><tr><th>سطر</th><th>المنتج</th><th>ملاحظات</th></tr>${shown.map(i=>`<tr><td>${i.line}</td><td>${esc(i.title||i.handle||"-")}</td><td>${i.errors.map(e=>`<span style="color:#c0392b">${esc(e)}</span>`).concat(i.warnings.map(esc)).join("<br>")}</td></tr>`).join("")}</table></div></div>`:""}
