@@ -244,6 +244,7 @@ body.cr-l .card{border-radius:22px;overflow:hidden}body.cr-s .card{border-radius
 .bnav{display:flex;position:fixed;bottom:0;left:0;right:0;height:58px;background:#fff;box-shadow:0 -2px 12px #0003;z-index:27;padding-bottom:env(safe-area-inset-bottom)}
 .bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;color:#6b6b6b;font:700 12px var(--font),sans-serif}
 .bnav a.on{color:var(--primary)}
+.bnav .bnacc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;color:#6b6b6b;font:700 12px var(--font),sans-serif;cursor:pointer;padding:0}.bnav .bnacc.on{color:var(--primary)}
 body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .bar{bottom:58px}.stick{bottom:58px}.fab{bottom:136px}.trkfab{bottom:204px}#toast{bottom:150px}
 }

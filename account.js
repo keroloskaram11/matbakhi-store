@@ -26,6 +26,7 @@
   const hdr = document.querySelector("header.top"), cb = $("cartBtn"); if (hdr) hdr.insertBefore(btn, cb || null);
   const draw = () => { btn.innerHTML = sess ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>حسابي</span>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>دخول</span>' };
   draw();
+  const bn = $("bnAcc"); if (bn) bn.onclick = () => btn.onclick();
 
   /* modal */
   const ov = document.createElement("div"); ov.className = "accov"; ov.hidden = true; ov.innerHTML = '<div class="accbox" role="dialog" aria-modal="true"><button class="accx" type="button" aria-label="إغلاق">&times;</button><div id="accbody"></div></div>'; document.body.appendChild(ov);
