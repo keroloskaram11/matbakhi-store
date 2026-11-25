@@ -36,7 +36,7 @@ ${p.description ? `<h2>وصف المنتج</h2><div class="desc rich">${L.descHt
 ${S.return_policy ? `<details class="rp prp"><summary>سياسة الاسترجاع</summary><p class="desc">${L.esc(S.return_policy).replace(/\n/g, "<br>")}</p></details>` : ""}</div></article>
 ${related.length ? `<h2 class="sec">منتجات مشابهة</h2><div class="grid">${L.cardsHtml(related, tm, 0)}</div>` : ""}
 ${out ? "" : `<div class="stick" id="stick"><div><b>${L.esc(L.cut(p.name, 28))}</b><span class="price">${L.fmt(pr)} جنيه</span></div><button class="btn" id="stickadd" ${attrs}>أضف للسلة</button></div>`}`;
-    return L.send(L.layout({ req, S, cats, zonesList: Z, title: `${p.name} | ${name}`, desc, path, ld, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.name, image: img } }));
+    return L.send(L.layout({ req, S, cats, zonesList: Z, title: `${L.cut(p.name, 62)} | ${name}`, desc, path, ld, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.name, image: img } }));
   } catch (e) { return L.fail(e) }
 };
 export const config = { path: ["/p/:slug"] };
