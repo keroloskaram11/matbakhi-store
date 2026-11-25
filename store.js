@@ -186,3 +186,24 @@ document.addEventListener("click", e => {
   const m = document.getElementById("gmain"); if (!m) return;
   m.src = b.dataset.src; document.querySelectorAll("#thumbs button").forEach(x => x.classList.toggle("on", x === b));
 });
+
+// hero slider: fade, auto-advance, pause on touch/hover/hidden tab, swipe, dots
+(function () {
+  document.querySelectorAll("[data-hs]").forEach(root => {
+    const sl = [...root.querySelectorAll(".hs-slide")], dots = [...root.querySelectorAll(".hs-dots button")];
+    if (sl.length < 2) return;
+    const hold = Math.max(1000, +root.dataset.ms || 2000), still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let i = 0, t = null, paused = false;
+    const show = n => { i = (n + sl.length) % sl.length; sl.forEach((s, k) => s.classList.toggle("on", k === i)); dots.forEach((d, k) => d.classList.toggle("on", k === i)) };
+    const stop = () => { clearTimeout(t); t = null };
+    const loop = () => { stop(); if (paused || still || document.hidden) return; t = setTimeout(() => { show(i + 1); loop() }, hold + 900) };
+    dots.forEach((d, k) => d.addEventListener("click", () => { show(k); loop() }));
+    let x0 = null, resume = null;
+    root.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; paused = true; stop(); clearTimeout(resume) }, { passive: true });
+    root.addEventListener("touchend", e => { const dx = (e.changedTouches[0].clientX - x0); if (Math.abs(dx) > 40) show(i + (dx > 0 ? 1 : -1)); x0 = null; resume = setTimeout(() => { paused = false; loop() }, 3000) }, { passive: true });
+    root.addEventListener("mouseenter", () => { paused = true; stop() });
+    root.addEventListener("mouseleave", () => { paused = false; loop() });
+    document.addEventListener("visibilitychange", loop);
+    loop();
+  });
+})();
