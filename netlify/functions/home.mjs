@@ -1,5 +1,5 @@
 import * as L from "../lib/lib.mjs";
-const DEFAULT = [{ k: "intro", on: true }, { k: "reviews", on: true }, { k: "catsecs", on: true }, { k: "trust", on: true }, { k: "categories", on: true }, { k: "featured", on: true }, { k: "latest", on: true }, { k: "about", on: true }];
+const DEFAULT = [{ k: "intro", on: true }, { k: "reviews", on: true }, { k: "categories", on: true }, { k: "catsecs", on: true }, { k: "trust", on: true }, { k: "featured", on: false }, { k: "latest", on: false }, { k: "about", on: true }];
 export default async (req, context) => {
   try {
     const [S, cats, Z, latest, featured] = await Promise.all([L.settings(), L.categories(), L.zones(),
@@ -29,7 +29,16 @@ export default async (req, context) => {
       catsecs: () => cs.map((x, i) => csData[i].length ? `<section class="csec"><div class="csec-h"><h2 class="sec">${L.esc(x.c.name)}</h2><a class="csec-m" href="/c/${L.esc(encodeURIComponent(x.c.slug))}">عرض الكل</a></div><div class="grid">${L.cardsHtml(csData[i], csTm)}</div></section>` : "").join(""),
       trust: () => L.trustHtml(S),
       track: () => "",
-      categories: () => homeCats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${homeCats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "",
+      categories: () => {
+        let g = null; try { g = JSON.parse(S.home_cat_grid || "null") } catch (e) {}
+        if (g && Array.isArray(g.items)) {
+          const cols = [1, 2, 3].includes(+g.cols) ? +g.cols : 2;
+          const its = g.items.filter(x => x && x.on !== false).map(x => ({ c: cats.find(c => c.slug === x.slug), t: String(x.t || "").slice(0, 160) })).filter(x => x.c);
+          if (!its.length) return "";
+          return `<section><h2 class="sec">${L.esc(S.home_cat_title || "تسوق حسب القسم")}</h2><div class="cg c${cols}">${its.map(x => `<a class="cgi" href="/c/${L.esc(encodeURIComponent(x.c.slug))}">${L.safeUrl(x.c.image_url) ? `<img src="${L.esc(x.c.image_url)}" alt="${L.esc(x.c.name)}" loading="lazy">` : `<span class="cgp">${L.esc(x.c.name.slice(0, 1))}</span>`}<b>${L.esc(x.c.name)}</b>${x.t ? `<small>${L.esc(x.t)}</small>` : ""}</a>`).join("")}</div></section>`;
+        }
+        return homeCats.length ? `<section><h2 class="sec">تسوق حسب القسم</h2><div class="catgrid">${homeCats.map(c => `<a class="cc" href="/c/${L.esc(encodeURIComponent(c.slug))}">${L.safeUrl(c.image_url) ? `<img src="${L.esc(c.image_url)}" alt="${L.esc(c.name)}" width="120" height="120" loading="lazy">` : `<span class="ci">${L.esc(c.name.slice(0, 1))}</span>`}<b>${L.esc(c.name)}</b></a>`).join("")}</div></section>` : "";
+      },
       featured: () => featured.length ? `<section><h2 class="sec">منتجات مميزة</h2><div class="grid">${L.cardsHtml(featured, tm)}</div></section>` : "",
       latest: () => `<section><h2 class="sec">أحدث المنتجات</h2><div class="grid">${L.cardsHtml(latest, tm)}</div><p style="text-align:center"><a class="btn gray" href="/products">عرض كل المنتجات</a></p></section>`,
       about: () => `<section class="about"><h2>عن ${L.esc(name)}</h2><p>${L.esc(S.seo_description || "")} نوصل لجميع محافظات مصر والدفع عند الاستلام. نبيع جملة وقطاعي، <a href="/wholesale">اطلب عرض سعر جملة</a>.</p></section>`
