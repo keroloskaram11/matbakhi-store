@@ -47,6 +47,7 @@
   const unitOf = i => unit(i, i.qty);
   let varIds = null; const loadVarIds = () => (varIds = varIds || fetch(window.SUPABASE_URL + "/rest/v1/product_variants?select=product_id", { headers: { apikey: window.SUPABASE_KEY } }).then(r => r.json()).then(j => new Set(Array.isArray(j) ? j.map(x => x.product_id) : [])).catch(() => new Set()));
   setTimeout(loadVarIds, 800);
+  if ($("hform")) $("hform").onsubmit = e => { e.preventDefault(); const no = ($("hno").value || "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, ""), ph = ($("hph").value || "").trim(); if (!no || ph.length < 8) { $("herr").textContent = "اكتب رقم الطلب ورقم الموبايل"; return } try { sessionStorage.setItem("trk", JSON.stringify({ no, ph })) } catch (x) {} location.href = "/track" };
   document.addEventListener("change", e => { const r = e.target.closest && e.target.closest("[name=var]"); if (!r) return; const p = r.dataset.price; document.querySelectorAll(".pinfo .pr .price,.stick .price").forEach(el => el.textContent = Number(p).toLocaleString("en-US") + " جنيه"); const o = document.querySelector(".pinfo .pr .old"); if (o) o.textContent = r.dataset.old ? Number(r.dataset.old).toLocaleString("en-US") : "" });
   const sub = () => cart.reduce((a, i) => a + i.qty * unitOf(i), 0);
   const freeMin = () => parseFloat(S.free_shipping_min) || 0;
