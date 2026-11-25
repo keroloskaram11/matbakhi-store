@@ -58,9 +58,9 @@ function card(p, first, tiers) {
   const img = safeUrl(p.image_url), t = tiers || [], min = p.min_order_qty || 1, out = p.in_stock === false;
   const off = sale ? Math.round((1 - pr / p.price) * 100) : 0;
   const best = t.length ? t[t.length - 1] : null;
-  return `<article class="card">${out ? `<span class="badge gr">نفذت الكمية</span>` : sale ? `<span class="badge">خصم ${off}%</span>` : ""}<a href="${esc(href)}" class="imgl">${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" width="400" height="400" ${first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>` : `<div class="ph"></div>`}</a>
+  return `<article class="card">${out ? `<span class="badge gr">نفذت الكمية</span>` : sale ? `<span class="badge">-${off}%</span>` : ""}<a href="${esc(href)}" class="imgl">${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" width="400" height="400" ${first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>` : `<div class="ph"></div>`}</a>
 <div class="in"><h3><a href="${esc(href)}">${esc(p.name)}</a></h3><div class="pr"><span class="price">${fmt(pr)} جنيه</span>${sale ? `<span class="old">${fmt(p.price)}</span>` : ""}</div>
-${best ? `<div class="tierhint">جملة: ${fmt(best.unit_price)} جنيه للقطعة عند ${best.min_qty}+</div>` : min > 1 ? `<div class="tierhint">أقل كمية ${min}</div>` : ""}
+${best ? `<div class="tierhint">جملة ${fmt(best.unit_price)} ج عند ${best.min_qty}+</div>` : min > 1 ? `<div class="tierhint">أقل كمية ${min}</div>` : ""}
 ${out ? `<button class="btn add" disabled>نفذت الكمية</button>` : `<button class="btn add" data-add data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-price="${esc(pr)}" data-image="${esc(img)}" data-slug="${esc(p.slug)}" data-min="${min}" data-tiers="${esc(JSON.stringify(t.map(x => [x.min_qty, +x.unit_price])))}">أضف للسلة</button>`}</div></article>`;
 }
 const cardsHtml = (list, tm, firstN = 2) => list.map((p, i) => card(p, i < firstN, tm[String(p.id)])).join("");
