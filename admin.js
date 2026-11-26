@@ -9,8 +9,8 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["apps","التطبيقات"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["payments","الدفع الأونلاين"],["carriers","عقود شركات الشحن"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
-const AREA={products:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet",payments:"payment",carriers:"shipping"};
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["apps","التطبيقات"],["aisearch","البحث الذكي"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["payments","الدفع الأونلاين"],["carriers","عقود شركات الشحن"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
+const AREA={products:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",aisearch:"settings",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet",payments:"payment",carriers:"shipping"};
 const AREAS=[["orders","الطلبات"],["abandoned","السلات المتروكة"],["products","المنتجات والأقسام"],["reviews","التقييمات"],["customers","العملاء"],["discounts","الخصومات والكوبونات"],["settings","الإعدادات (المتجر/الدومين)"],["reports","التقارير والتحليلات"],["apps","التطبيقات"],["payment","الدفع"],["shipping","الشحن"],["pages","الصفحات"],["wallet","المحفظة (القسائم والرصيد)"],["permissions","الموظفين والصلاحيات"]];
 let ME={owner:true,perms:{}};const lvl=a=>ME.owner?"full":(ME.perms[a]||"none");
 const V={};let tab="home";
@@ -403,6 +403,25 @@ V.legal=()=>{
   const {error}=await sb.from("settings").upsert(rows.map(r=>({...r,updated_at:new Date().toISOString()})),{onConflict:"key"});
   if(error)return lgFl(m,"خطأ: "+error.message);rows.forEach(r=>D.settings[r.key]=r.value);lgFl(m,"تم الحفظ (التغيير بيظهر للعملاء خلال 5 دقايق)",true)});
  wire($("view"),".lgreset",b=>b.onclick=()=>{const bx=b.closest("[data-lg]");if(confirm("ترجّع القالب الأصلي في الخانة (مش هيتحفظ غير لما تدوس حفظ)؟"))bx.querySelector("textarea").value=LEGAL_T[bx.dataset.lg]});
+};
+
+IC.aisearch="<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z\"/><path d=\"M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z\"/></svg>";
+V.aisearch=async()=>{
+ const on=setting("ai_search_on","")==="1",wel=setting("ai_search_welcome",""),ex=(()=>{try{return JSON.parse(setting("ai_search_examples","[]"))}catch(e){return[]}})();
+ $("view").innerHTML=`<div class="box"><h3>البحث الذكي</h3><p class="hint">زرار "بحث ذكي" جنب مربع البحث في المتجر. بيفهم كلام العميل العادي ويرشح من منتجاتك الحقيقية بس، حسب الميزانية والمتاح. المنتجات الجديدة بتدخل البحث تلقائي من غير أي خطوة.</p>
+ <label><input type="checkbox" id="ais_on" ${on?"checked":""}> تشغيل البحث الذكي في المتجر</label>
+ <label>جملة الترحيب</label><textarea id="ais_w" rows="2" style="width:100%" maxlength="200">${esc(wel)}</textarea>
+ <label>الأمثلة الجاهزة (مثال في كل سطر، حتى 16)</label><textarea id="ais_e" rows="8" style="width:100%">${esc(ex.join("\n"))}</textarea>
+ <button id="ais_s">حفظ</button> <span id="ais_m" class="msg"></span></div>
+ <div class="box"><h3>أكتر عمليات البحث (آخر 30 يوم)</h3><div id="ais_t" class="hint">جاري التحميل...</div></div>`;
+ $("ais_s").onclick=async()=>{const exs=$("ais_e").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,16);
+  const rows=[{key:"ai_search_on",value:$("ais_on").checked?"1":"0"},{key:"ai_search_welcome",value:$("ais_w").value.trim()},{key:"ai_search_examples",value:JSON.stringify(exs)}];
+  const {error}=await sb.from("settings").upsert(rows.map(r=>({...r,updated_at:new Date().toISOString()})),{onConflict:"key"});
+  if(error)return flash("ais_m","خطأ: "+error.message);rows.forEach(r=>D.settings[r.key]=r.value);flash("ais_m","تم الحفظ (بيظهر للعملاء خلال 5 دقايق)",true)};
+ const {data,error}=await sb.rpc("ai_search_top",{p_days:30});
+ if(error){$("ais_t").textContent="خطأ: "+error.message;return}
+ const t=data.top||[];
+ $("ais_t").innerHTML=t.length?`<p>إجمالي العمليات: ${data.total}</p><table><tr><th>الكلمة</th><th>عدد المرات</th><th>متوسط النتايج</th><th>بدون نتايج</th></tr>${t.map(x=>`<tr><td>${esc(x.q)}</td><td>${x.n}</td><td>${x.avg_results}</td><td>${x.zero}</td></tr>`).join("")}</table>`:"لسه مفيش عمليات بحث ذكي من العملاء.";
 };
 
 /* ---------- categories ---------- */
