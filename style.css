@@ -375,3 +375,4 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .csec-s .hscroll>*{flex-basis:calc(44% - 5px)}.csec-s .hscroll.gc1>*{flex-basis:76%}.csec-s .hscroll.gc3>*{flex-basis:calc(31% - 7px)}
 @media(min-width:760px){.csec-s .hscroll>*,.csec-s .hscroll.gc1>*,.csec-s .hscroll.gc3>*{flex-basis:calc(23% - 8px)}}
 .csec-s .hscroll{scrollbar-width:none}.csec-s .hscroll::-webkit-scrollbar{display:none}
+@media(max-width:560px){header.top{gap:6px;padding:8px 10px}header.top .brand{gap:6px;overflow:hidden}header.top .name{flex:0 1 auto;min-width:0;font-size:16px}header.top img{width:34px!important;height:34px!important}header.top a.hl{flex:none}.cw .cw-t{display:none}.cw .cw-main{width:42px;height:42px}.trkfab{font-size:12px!important;padding:7px 11px!important;opacity:.92}}
