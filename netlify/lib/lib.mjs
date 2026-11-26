@@ -39,7 +39,7 @@ async function tiersFor(prods) {
   const m = {}; rows.forEach(r => (m[r.product_id] = m[r.product_id] || []).push(r)); return m;
 }
 const categories = () => rest("categories?select=id,name,slug,image_url,description,sort_order,show_home,show_menu,show_footer&active=eq.true&order=sort_order.asc,name.asc");
-const PCOLS = "id,name,slug,description,price,sale_price,image_url,category_id,updated_at,created_at,in_stock,featured,min_order_qty,images,attributes,listed";
+const PCOLS = "id,name,slug,description,price,sale_price,image_url,category_id,updated_at,created_at,in_stock,featured,min_order_qty,images,attributes,listed,stock_public";
 
 function baseUrl(req, S) {
   const u = (S.site_url || "").trim().replace(/\/+$/, "");
@@ -61,7 +61,7 @@ function card(p, first, tiers) {
   const best = t.length ? t[t.length - 1] : null;
   return `<article class="card">${out ? `<span class="badge gr">نفذت الكمية</span>` : sale ? `<span class="badge">-${off}%</span>` : ""}<a href="${esc(href)}" class="imgl">${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" width="400" height="400" ${first ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>` : `<div class="ph"></div>`}</a>
 <div class="in"><h3><a href="${esc(href)}">${esc(p.name)}</a></h3><div class="pr"><span class="price${sale ? " sale" : ""}">${fmt(pr)} جنيه</span>${sale ? `<span class="old">${fmt(p.price)}</span>` : ""}</div>${sale ? `<div class="save">وفّر ${fmt(p.price - pr)} جنيه</div>` : ""}
-${best ? `<div class="tierhint">جملة ${fmt(best.unit_price)} ج عند ${best.min_qty}+</div>` : min > 1 ? `<div class="tierhint">أقل كمية ${min}</div>` : ""}
+${p.stock_public && !out ? `<div class="tierhint" style="color:#b45309;font-weight:700">باقي ${Number(p.stock_public)} قطعة فقط</div>` : ""}${best ? `<div class="tierhint">جملة ${fmt(best.unit_price)} ج عند ${best.min_qty}+</div>` : min > 1 ? `<div class="tierhint">أقل كمية ${min}</div>` : ""}
 ${out ? `<button class="btn add" disabled>نفذت الكمية</button>` : `<button class="btn add" data-add data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-price="${esc(pr)}" data-image="${esc(img)}" data-slug="${esc(p.slug)}" data-min="${min}" data-tiers="${esc(JSON.stringify(t.map(x => [x.min_qty, +x.unit_price])))}">أضف للسلة</button>`}</div></article>`;
 }
 const cardsHtml = (list, tm, firstN = 2) => list.map((p, i) => card(p, i < firstN, tm[String(p.id)])).join("");
