@@ -1,4 +1,4 @@
-(function(){
+(function(){if(window.__aiSI||document.querySelector(".aibtn"))return;window.__aiSI=1;
 var U=window.SUPABASE_URL,K=window.SUPABASE_KEY;if(!U||!K)return;
 var f=document.getElementById("sf");if(!f)return;
 var $=function(i){return document.getElementById(i)};
