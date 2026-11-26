@@ -4,6 +4,7 @@ import category from "../netlify/functions/category.mjs";
 import product from "../netlify/functions/product.mjs";
 import wholesale from "../netlify/functions/wholesale.mjs";
 import legal from "../netlify/functions/legal.mjs";
+import landing from "../netlify/functions/landing.mjs";
 import track from "../netlify/functions/track.mjs";
 import sitemap from "../netlify/functions/sitemap.mjs";
 import robots from "../netlify/functions/robots.mjs";
@@ -12,7 +13,7 @@ import feed from "../netlify/functions/feed.mjs";
 
 export const onRequest = async (c) => {
   const u0 = new URL(c.request.url);
-  const cacheable = c.request.method === "GET" && !u0.search && /^\/($|products$|c\/|p\/|wholesale$|track$|legal\/)/.test(u0.pathname);
+  const cacheable = c.request.method === "GET" && !u0.search && /^\/($|products$|c\/|p\/|wholesale$|track$|legal\/|lp\/)/.test(u0.pathname);
   if (!cacheable) return handle(c);
   const ck = new Request(u0.origin + u0.pathname, { method: "GET" });
   const getCv = async () => { try { const r = await L.rest("settings?select=value&key=eq.cache_v"); return (r && r[0] && r[0].value) || "0" } catch (e) { return null } };
@@ -49,6 +50,7 @@ const handle = async (c) => {
   else if (p === "/wholesale") h = wholesale;
   else if (p === "/track") h = track;
   else if (p.startsWith("/legal/")) h = legal;
+  else if (p.startsWith("/lp/")) h = landing;
   else if (p === "/sitemap.xml") h = sitemap;
   else if (p === "/robots.txt") h = robots;
   else if (p === "/llms.txt") h = llms;
