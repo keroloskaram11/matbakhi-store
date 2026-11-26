@@ -186,7 +186,7 @@ ${footCats.length ? `<nav class="fcats" aria-label="الأقسام">${footCats.m
 <button class="trkfab" id="trkfab" type="button" aria-label="تتبع طلبك">&#128666; تتبع طلبك</button>
 
 <script>window.__S=${inlineJson(publicS)};window.SUPABASE_URL=${inlineJson(SUPABASE_URL)};window.SUPABASE_KEY=${inlineJson(SUPABASE_KEY)};window.__Z=${inlineJson(zs)};</script>
-<script src="/store.js" defer></script><script src="/aisearch.js?v=3" defer></script><script src="/slider.js?v=1" defer></script><script src="/aisearch.js?v=3" defer></script><script src="/account.js" defer></script>
+<script src="/store.js" defer></script><script src="/aisearch.js?v=4" defer></script><script src="/slider.js?v=2" defer></script><script src="/account.js" defer></script>
 </body></html>`;
 }
 
