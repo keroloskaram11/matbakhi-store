@@ -359,3 +359,18 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .aich button{color:var(--primary);background:#fff;border:1px solid var(--primary);font-weight:600}
 .aich button:active{background:var(--primary);color:#fff}
 .aibar input{flex:1 1 0}.aisend{flex:none;white-space:nowrap;padding:0 18px}.aibtn{flex:none}
+
+/* slider ui */
+.csec-s{background:linear-gradient(180deg,#f3e9dd,#faf4ec);border:1px solid #e6d6c3;border-radius:18px;padding:12px 10px 10px;margin:18px 0}
+.csec-s .csec-h{padding:0 4px;border-bottom:2px solid var(--accent,#F6AF10);margin-bottom:10px;padding-bottom:6px}
+.csec-s .sec{margin:4px 0}
+.hsw{position:relative}
+.hsa{position:absolute;top:34%;z-index:3;width:42px;height:42px;border-radius:50%;border:0;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 10px #0004}
+.hsa:disabled{opacity:.35;cursor:default}
+.hsa-p{right:-4px}.hsa-n{left:-4px}
+.hs-no .hsa{display:none}
+.hsb{height:4px;background:#e3d3c0;border-radius:4px;margin:4px 6px 0;overflow:hidden}.hsb i{display:block;height:100%;background:var(--primary);border-radius:4px}
+.hsb[hidden],.hsh[hidden]{display:none}
+.hsh{text-align:center;font-size:12px;color:#7a5a45;margin-top:5px}
+.csec-s .hscroll>*{flex-basis:calc(44% - 5px)}.csec-s .hscroll.gc1>*{flex-basis:76%}.csec-s .hscroll.gc3>*{flex-basis:calc(31% - 7px)}
+@media(min-width:760px){.csec-s .hscroll>*,.csec-s .hscroll.gc1>*,.csec-s .hscroll.gc3>*{flex-basis:calc(23% - 8px)}}
