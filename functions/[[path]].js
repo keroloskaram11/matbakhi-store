@@ -12,13 +12,28 @@ import feed from "../netlify/functions/feed.mjs";
 
 export const onRequest = async (c) => {
   const u0 = new URL(c.request.url);
-  const cacheable = false; /* live data: no edge caching, dashboard changes show on refresh */
-  const ck = cacheable ? new Request(u0.origin + u0.pathname, { method: "GET" }) : null;
-  if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
+  const cacheable = c.request.method === "GET" && !u0.search && /^\/($|products$|c\/|p\/|wholesale$|track$|legal\/)/.test(u0.pathname);
+  if (!cacheable) return handle(c);
+  const ck = new Request(u0.origin + u0.pathname, { method: "GET" });
+  const getCv = async () => { try { const r = await L.rest("settings?select=value&key=eq.cache_v"); return (r && r[0] && r[0].value) || "0" } catch (e) { return null } };
+  const tag = (r, s) => { const o = new Response(r.body, r); o.headers.set("Cache-Control", "public, max-age=0, must-revalidate"); o.headers.set("X-Cache", s); return o };
+  const hit = await caches.default.match(ck);
+  if (hit) {
+    const age = Date.now() - Number(hit.headers.get("X-Cts") || 0);
+    if (age < 15000) return tag(hit, "HIT");
+    const cv = await getCv();
+    if (cv !== null && cv === hit.headers.get("X-Cv") && age < 900000) {
+      const re = new Response(hit.clone().body, hit); re.headers.set("X-Cts", String(Date.now())); c.waitUntil(caches.default.put(ck, re));
+      return tag(hit, "HIT-REVALIDATED");
+    }
+  }
+  const cv0 = await getCv();
   const res = await handle(c);
-  if (ck && res.status === 200 && (res.headers.get("content-type") || "").includes("text/html") && /^\/($|products|c\/|p\/|wholesale|track|legal\/)/.test(u0.pathname)) {
-    const out = new Response(res.body, res); out.headers.set("Cache-Control", "public, max-age=60, s-maxage=300"); out.headers.delete("netlify-cdn-cache-control");
-    c.waitUntil(caches.default.put(ck, out.clone())); return out;
+  if (cv0 !== null && res.status === 200 && (res.headers.get("content-type") || "").includes("text/html")) {
+    const st = new Response(res.clone().body, res);
+    st.headers.set("Cache-Control", "public, max-age=900"); st.headers.set("X-Cv", cv0); st.headers.set("X-Cts", String(Date.now())); st.headers.delete("netlify-cdn-cache-control");
+    c.waitUntil(caches.default.put(ck, st));
+    return tag(res, "MISS");
   }
   return res;
 };
