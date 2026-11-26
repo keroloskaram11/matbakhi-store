@@ -2,7 +2,7 @@ import * as L from "../lib/lib.mjs";
 export default async (req, context) => {
   try {
     const slug = L.dec(L.params(req, context).slug || "");
-    const [S, cats, Z, rows] = await Promise.all([L.settings(), L.categories(), L.zones(), L.rest(`products?select=${L.PCOLS}&active=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`)]);
+    const [S, cats, Z, rows] = await Promise.all([L.settings(), L.categories(), L.zones(), L.rest(`products?select=${L.PCOLS},seo_title,seo_description,image_alt&active=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`)]);
     const p = rows[0];
     if (!p) return L.notFound(req, S, cats, "المنتج");
     const b = L.baseUrl(req, S), name = S.store_name || "المتجر";
@@ -17,7 +17,7 @@ export default async (req, context) => {
     const plain = L.toText(p.description || "");
     const path = "/p/" + encodeURIComponent(p.slug);
     const crumbs = [["الرئيسية", "/"], ...(cat ? [[cat.name, "/c/" + encodeURIComponent(cat.slug)]] : [["كل المنتجات", "/products"]]), [p.name, path]];
-    const desc = L.cut(plain || `اشتري ${p.name} من ${name} بسعر ${L.fmt(pr)} جنيه مصري. توصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
+    const desc = L.cut((p.seo_description || "").trim() || plain || `اشتري ${p.name} من ${name} بسعر ${L.fmt(pr)} جنيه مصري. توصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
     const ld = [
       { "@context": "https://schema.org", "@type": "Product", name: p.name, ...(imgs.length ? { image: imgs } : {}), description: L.cut(plain || p.name, 500), sku: String(p.id), ...(cat ? { category: cat.name } : {}), brand: { "@type": "Brand", name },
         offers: { "@type": "Offer", url: b + path, priceCurrency: "EGP", price: pr.toFixed(2), availability: out ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", eligibleRegion: { "@type": "Country", name: "EG" }, seller: { "@type": "Organization", name } } },
@@ -30,7 +30,7 @@ export default async (req, context) => {
     const attrHtml = attrList.length ? `<h2>المواصفات</h2><table class="attrs">${attrList.map(a => `<tr><th>${L.esc(a.k)}</th><td>${L.esc(a.v)}</td></tr>`).join("")}</table>` : "";
     const tierTbl = tiers.length ? `<h2>أسعار الكمية (جملة)</h2><table class="tiers"><tr><th>الكمية</th><th>سعر القطعة</th><th></th></tr><tr><td>1+</td><td>${L.fmt(pr)} جنيه</td><td></td></tr>${tiers.map(t => `<tr><td>${t.min_qty}+</td><td><b>${L.fmt(t.unit_price)} جنيه</b></td><td>${L.esc(t.label || "")}</td></tr>`).join("")}</table>` : "";
     const main = `${L.crumbHtml(crumbs)}
-<article class="prod"><div class="pgal"><div class="pimg">${img ? `<img id="gmain" src="${L.esc(img)}" alt="${L.esc(p.name)}" width="800" height="800" fetchpriority="high">` : `<div class="ph"></div>`}${sale ? `<span class="badge">خصم ${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${imgs.length > 1 ? `<div class="thumbs" id="thumbs">${imgs.map((u, i) => `<button type="button" class="${i ? "" : "on"}" data-src="${L.esc(u)}" aria-label="صورة ${i + 1}"><img src="${L.esc(u)}" alt="${L.esc(p.name)} - ${i + 1}" width="64" height="64" loading="lazy"></button>`).join("")}</div>` : ""}</div>
+<article class="prod"><div class="pgal"><div class="pimg">${img ? `<img id="gmain" src="${L.esc(img)}" alt="${L.esc(p.image_alt || p.name)}" width="800" height="800" fetchpriority="high">` : `<div class="ph"></div>`}${sale ? `<span class="badge">خصم ${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${imgs.length > 1 ? `<div class="thumbs" id="thumbs">${imgs.map((u, i) => `<button type="button" class="${i ? "" : "on"}" data-src="${L.esc(u)}" aria-label="صورة ${i + 1}"><img src="${L.esc(u)}" alt="${L.esc(p.name)} - ${i + 1}" width="64" height="64" loading="lazy"></button>`).join("")}</div>` : ""}</div>
 <div class="pinfo"><h1>${L.esc(p.name)}</h1>${cat ? `<p class="muted">القسم: <a href="/c/${L.esc(encodeURIComponent(cat.slug))}">${L.esc(cat.name)}</a></p>` : ""}
 <div class="pr big"><span class="price${sale ? " sale" : ""}">${L.fmt(pr)} جنيه</span>${sale ? `<span class="old">${L.fmt(p.price)}</span><span class="offpct">-${Math.round((1 - pr / p.price) * 100)}%</span>` : ""}</div>${sale ? `<div class="save big">وفّر ${L.fmt(p.price - pr)} جنيه</div>` : ""}
 <p class="muted">${out ? "نفذت الكمية حالياً" : "متوفر"} - التوصيل لجميع محافظات مصر - الدفع عند الاستلام${min > 1 ? ` - أقل كمية للطلب ${min}` : ""}</p>
@@ -44,7 +44,7 @@ ${p.description ? `<h2>وصف المنتج</h2><div class="desc rich">${L.descHt
 ${S.return_policy ? `<details class="rp prp"><summary>سياسة الاسترجاع</summary><p class="desc">${L.esc(S.return_policy).replace(/\n/g, "<br>")}</p></details>` : ""}</div></article>
 ${related.length ? `<h2 class="sec">منتجات مشابهة</h2><div class="grid">${L.cardsHtml(related, tm, 0)}</div>` : ""}
 ${out ? "" : `<div class="stick" id="stick"><div><b>${L.esc(L.cut(p.name, 28))}</b><span class="price">${L.fmt(pr)} جنيه</span></div><button class="btn" id="stickadd" ${attrs}>أضف للسلة</button></div>`}`;
-    return L.send(L.layout({ req, S, cats, zonesList: Z, title: `${L.cut(p.name, 62)} | ${name}`, desc, path, ld, robots: p.listed === false ? "noindex,follow" : undefined, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.name, image: img } }));
+    return L.send(L.layout({ req, S, cats, zonesList: Z, title: p.seo_title ? L.cut(p.seo_title, 70) : `${L.cut(p.name, 62)} | ${name}`, desc, path, ld, robots: p.listed === false ? "noindex,follow" : undefined, body: { main }, currentCat: cat ? cat.slug : null, og: { type: "product", title: p.seo_title || p.name, image: img } }));
   } catch (e) { return L.fail(e) }
 };
 export const config = { path: ["/p/:slug"] };
