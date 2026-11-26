@@ -27,10 +27,10 @@ function init(){
  $("aib").addEventListener("click",function(e){var c=e.target.closest("[data-aq]");if(c){e.preventDefault();var v=c.getAttribute("data-aq");$("aiq").value=v;run(v,{reset:true});return}
   var a=e.target.closest("[data-af]");if(a){e.preventDefault();follow(a.getAttribute("data-af"))}})}
 function home(){$("aib").innerHTML='<p class="aiw">'+esc(cfg.welcome)+'</p><div class="aich">'+cfg.ex.map(function(x){return'<button type="button" data-aq="'+esc(x)+'">'+esc(x)+'</button>'}).join("")+'</div>'}
-function call(o){return fetch(U+"/rest/v1/rpc/ai_search",{method:"POST",headers:H,body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function call(o){return fetch(U+"/rest/v1/rpc/ai_search_smart",{method:"POST",headers:H,body:JSON.stringify(o)}).then(function(r){return r.json()})}
 function run(q,o){o=o||{};if(o.reset){ctx={q:q,budget:null,sort:"fit",shown:[],last:[],small:false}}
  $("aib").innerHTML='<p class="aiw">بدور لك...</p>';
- call({p_q:ctx.q,p_budget:ctx.budget,p_sort:ctx.sort,p_limit:6,p_exclude:ctx.shown,p_small:ctx.small}).then(function(r){
+ call({p_q:ctx.q,p_budget:ctx.budget,p_sort:(ctx.sort==="fit"&&!ctx.budget?null:ctx.sort),p_limit:6,p_exclude:ctx.shown,p_small:ctx.small}).then(function(r){
   if(!r||!r.ok){$("aib").innerHTML='<p class="aiw">حصلت مشكلة في البحث. جرب البحث العادي.</p>';return}
   if(r.parsed&&r.parsed.budget&&!ctx.budget)ctx.budget=r.parsed.budget;
   var it=r.items||[];
