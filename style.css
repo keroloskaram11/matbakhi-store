@@ -263,6 +263,7 @@ body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
 .cbg{padding:14px 12px;border-radius:16px;margin:14px 0}
 .txs{text-align:center;padding:10px 6px}.txs p{white-space:pre-line;line-height:1.9;margin:6px 0}
 .bns{margin:14px 0}.bns img{width:100%;display:block;border-radius:14px}
+@media(max-width:560px){button.trkfab{font-size:0!important;padding:0!important;width:40px;height:40px;display:flex;align-items:center;justify-content:center;opacity:.9}button.trkfab::before{content:"\1F69A";font-size:18px;line-height:1}body .cw .cw-main{width:40px;height:40px;opacity:.9}body .fab{width:44px;height:44px;font-size:22px}}
 
 .ost{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:22px 14px;margin:14px 0;text-align:center;color:#0f172a;box-shadow:0 8px 24px #0000000f}
 .ost-b{background:#dc2626;color:#fff;font-weight:800;font-size:14px;padding:11px 16px;border-radius:50px;box-shadow:0 4px 14px #dc262640;display:flex;align-items:center;justify-content:center;gap:9px;margin:0 auto 24px;line-height:1.5}
