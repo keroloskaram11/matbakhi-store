@@ -41,7 +41,7 @@ export default async (req, context) => {
       video: x => { const m = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/.exec(String(x.url || "")); if (!m) return ""; const t = String(x.title || "").trim().slice(0, 80);
         return `<section class="vid">${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}<div class="vidf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="${L.esc(t || "فيديو")}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></section>` },
       text: x => { const t = String(x.title || "").trim().slice(0, 80), b = String(x.body || "").trim().slice(0, 1500); if (!t && !b) return ""; const bg = bgOf(x.bg); return `<section class="txs${bg ? " cbg" : ""}"${bg ? ` style="background:${bg}"` : ""}>${t ? `<h2 class="sec">${L.esc(t)}</h2>` : ""}${b ? `<p>${L.esc(b)}</p>` : ""}</section>` },
-      banner: x => { const im = L.safeUrl(x.img); if (!im) return ""; const img = `<img src="${L.esc(im)}" alt="${L.esc(String(x.alt || "").slice(0, 120))}" loading="lazy">`; return `<section class="bns">${lnkOk(x.link) ? `<a href="${L.esc(x.link)}">${img}</a>` : img}</section>` },
+      banner: x => { const im = L.safeUrl(x.img); if (!im) return ""; const img = `<img src="${L.esc(im)}" alt="${L.esc(String(x.alt || name).slice(0, 120))}" loading="lazy">`; return `<section class="bns">${lnkOk(x.link) ? `<a href="${L.esc(x.link)}">${img}</a>` : img}</section>` },
       intro: () => L.introHtml(S),
       reviews: () => L.reviewsHtml(S),
       chats: () => L.chatsHtml(S),
