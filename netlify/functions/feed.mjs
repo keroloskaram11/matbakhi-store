@@ -1,5 +1,6 @@
 import * as L from "../lib/lib.mjs";
-const clean = s => String(s ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 4900);
+const dc = s => { s = String(s || "").replace(/[\u3010\u3011]/g, " ").replace(/\s+/g, " ").trim(); for (let i = 0; i < 3; i++) s = s.replace(/^[^\p{L}\p{N}]+/u, "").replace(/^(عن هذه السلعة|عن هذا المنتج)[\s:\-]*/, ""); return s.trim() };
+const clean = s => dc(String(s ?? "").replace(/<[^>]*>/g, " ")).slice(0, 4900);
 const money = n => Number(n).toFixed(2) + " EGP";
 const x = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 const csv = s => '"' + String(s ?? "").replace(/"/g, '""') + '"';

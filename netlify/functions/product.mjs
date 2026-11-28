@@ -14,7 +14,8 @@ export default async (req, context) => {
     const vars = vrows.filter(v => v.in_stock !== false);
     const tiers = tm[String(p.id)] || [], min = p.min_order_qty || 1, out = p.in_stock === false;
     const pr = L.price(p), sale = L.isSale(p), imgs = L.imagesOf(p), img = imgs[0] || "";
-    const plain = L.toText(p.description || "");
+    const dc = s => { s = String(s || "").replace(/[\u3010\u3011]/g, " ").replace(/\s+/g, " ").trim(); for (let i = 0; i < 3; i++) s = s.replace(/^[^\p{L}\p{N}]+/u, "").replace(/^(عن هذه السلعة|عن هذا المنتج)[\s:\-]*/, ""); return s.trim() };
+    const plain = dc(L.toText(p.description || ""));
     const path = "/p/" + encodeURIComponent(p.slug);
     const crumbs = [["الرئيسية", "/"], ...(cat ? [[cat.name, "/c/" + encodeURIComponent(cat.slug)]] : [["كل المنتجات", "/products"]]), [p.name, path]];
     const desc = L.cut((p.seo_description || "").trim() || plain || `اشتري ${p.name} من ${name} بسعر ${L.fmt(pr)} جنيه مصري. توصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
