@@ -10,11 +10,17 @@
   const wa = t => "https://wa.me/" + waNum + (t ? "?text=" + encodeURIComponent(t) : "");
 
   /* ---------- pixels ---------- */
+  const mkEid = n => n + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const ckv = n => { const m = document.cookie.match(new RegExp("(?:^|; )" + n + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : "" };
+  const fbcv = () => { let c = ckv("_fbc"); if (!c) { const q = new URLSearchParams(location.search).get("fbclid"); if (q) c = "fb.1." + Date.now() + "." + q } return c };
+  /* server-side Conversions API (same event_id as the browser pixel so Meta de-duplicates). Runs only when app_meta_capi_on=1 and a token is saved in the vault. */
+  const capi = (name, eid, data) => { try { if (S.app_meta_capi_on !== "1" || !window.SUPABASE_URL) return; fetch(window.SUPABASE_URL + "/rest/v1/rpc/capi_event", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_name: name, p_event_id: eid, p_url: location.href, p_fbp: ckv("_fbp"), p_fbc: fbcv(), p_data: data || {} }), keepalive: true }).catch(() => {}) } catch (e) {} };
+  window.__pvid = mkEid("pv");
   function inject(code) { const s = document.createElement("script"); s.textContent = code; document.head.appendChild(s) }
   (function pixels() {
     const m = (S.meta_pixel_id || "").trim(), t = (S.tiktok_pixel_id || "").trim(), g = (S.ga_id || "").trim();
     const on = k => S[k] !== "0", gt = (S.gtm_id || "").trim();
-    if (/^\d{5,20}$/.test(m) && on("app_meta_on")) inject("!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + m + "');fbq('track','PageView');");
+    if (/^\d{5,20}$/.test(m) && on("app_meta_on")) inject("!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + m + "');fbq('track','PageView',{},{eventID:'" + window.__pvid + "'});"); setTimeout(() => capi("PageView", window.__pvid), 900);
     if (/^[A-Za-z0-9]{8,30}$/.test(t) && on("app_tiktok_on")) inject("!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement('script');o.type='text/javascript',o.async=!0,o.src=i+'?sdkid='+e+'&lib='+t;var a=document.getElementsByTagName('script')[0];a.parentNode.insertBefore(o,a)};ttq.load('" + t + "');ttq.page()}(window,document,'ttq');");
     if (/^GTM-[A-Z0-9]{4,12}$/.test(gt) && on("app_gtm_on")) inject("window.dataLayer=window.dataLayer||[];(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f)})(window,document,'script','dataLayer','" + gt + "');");
     if (/^(G|AW)-[A-Za-z0-9-]{4,20}$/.test(g) && on("app_ga_on")) { const s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + g; document.head.appendChild(s); inject("window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','" + g + "');") }
@@ -25,12 +31,13 @@
   // ev: AddToCart | InitiateCheckout | Purchase | Lead ; d: {value, items:[{id,name,price,qty}], order_no}
   function track(ev, d) {
     d = d || {}; const items = d.items || []; if (ev === "AddToCart") logEv("cart"); else if (ev === "InitiateCheckout") logEv("checkout");
-    const ids = items.map(i => String(i.id)), cur = "EGP", eid = ev === "Purchase" && d.order_no ? "p" + d.order_no : null;
+    const ids = items.map(i => String(i.id)), cur = "EGP", eid = ev === "Purchase" && d.order_no ? "p" + d.order_no : mkEid(ev);
     try { if (window.fbq) {
       const p = { value: d.value, currency: cur };
       if (ev !== "Lead") { p.content_ids = ids; p.content_type = "product"; p.contents = items.map(i => ({ id: String(i.id), quantity: i.qty })); p.num_items = items.reduce((a, i) => a + i.qty, 0) }
       else p.content_name = d.name;
       if (eid) fbq("track", ev, p, { eventID: eid }); else fbq("track", ev, p) } } catch (e) {}
+    if (ev !== "Purchase" && ev !== "Lead") capi(ev, eid, { value: d.value, ids: ids, contents: items.map(i => ({ id: String(i.id), quantity: i.qty })) });
     try { if (window.ttq) {
       const map = { Purchase: "PlaceAnOrder", Lead: "Contact" };
       ttq.track(map[ev] || ev, { value: d.value, currency: cur, contents: items.map(i => ({ content_id: String(i.id), content_name: i.name, quantity: i.qty, price: i.price })), content_type: "product", ...(eid ? { event_id: eid } : {}) }) } } catch (e) {}
