@@ -9,8 +9,8 @@ const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=v=>{const n=parseFloat(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)));return isNaN(n)?0:n};
 const today=()=>new Date().toISOString().slice(0,10);
 const D={products:[],costs:{},tiers:{},cats:[],statuses:[],orders:[],settings:{},zones:[],wholesale:[]};
-const NAV=[["home","الرئيسية"],["products","المنتجات"],["stock","المخزون"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["apps","التطبيقات"],["aisearch","البحث الذكي"],["aimgr","مدير المتجر الذكي"],["lpages","صفحات الهبوط"],["devtool","المطور الذكي"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["payments","الدفع الأونلاين"],["carriers","عقود شركات الشحن"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
-const AREA={products:"products",stock:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",aisearch:"settings",aimgr:"products",lpages:"pages",devtool:"settings",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet",payments:"payment",carriers:"shipping"};
+const NAV=[["home","الرئيسية"],["products","المنتجات"],["stock","المخزون"],["cats","الأقسام"],["orders","الطلبات"],["customers","العملاء"],["abandoned","سلات متروكة"],["reports","التقارير والأرباح"],["analytics","التحليلات"],["legal","الصفحات القانونية"],["mkt","أدوات التسويق"],["apps","التطبيقات"],["aisearch","البحث الذكي"],["aimgr","مدير المتجر الذكي"],["lpages","صفحات الهبوط"],["devtool","المطور الذكي"],["look","مظهر المتجر"],["shipping","الشحن"],["coupons","العروض وكوبونات الخصم"],["wallet","المحفظة"],["payments","الدفع الأونلاين"],["carriers","عقود شركات الشحن"],["settings","الإعدادات"],["staff","الموظفين والصلاحيات"]];
+const AREA={products:"products",stock:"products",cats:"products",orders:"orders",customers:"customers",abandoned:"abandoned",reports:"reports",analytics:"reports",legal:"pages",apps:"apps",mkt:"apps",aisearch:"settings",aimgr:"products",lpages:"pages",devtool:"settings",look:"settings",shipping:"shipping",coupons:"discounts",settings:"settings",staff:"permissions",wallet:"wallet",payments:"payment",carriers:"shipping"};
 const AREAS=[["orders","الطلبات"],["abandoned","السلات المتروكة"],["products","المنتجات والأقسام"],["reviews","التقييمات"],["customers","العملاء"],["discounts","الخصومات والكوبونات"],["settings","الإعدادات (المتجر/الدومين)"],["reports","التقارير والتحليلات"],["apps","التطبيقات"],["payment","الدفع"],["shipping","الشحن"],["pages","الصفحات"],["wallet","المحفظة (القسائم والرصيد)"],["permissions","الموظفين والصلاحيات"]];
 let ME={owner:true,perms:{}};const lvl=a=>ME.owner?"full":(ME.perms[a]||"none");
 const V={};let tab="home";
@@ -960,6 +960,43 @@ V.shipping=()=>{
   const {error}=await sb.from("shipping_zones").upsert(rows);if(error)throw error;D.zones=rows;flash("zm","تم الحفظ",true)}catch(e){flash("zm","خطأ: "+e.message)}};
 };
 
+V.mkt=async()=>{
+ const S=D.settings,on=k=>S[k]==="1",val=(k,d)=>(S[k]!==undefined&&S[k]!==""?S[k]:d);
+ const setK=async rows=>{const {error}=await sb.from("settings").upsert(rows.map(r=>({...r,updated_at:new Date().toISOString()})));if(error)throw error;rows.forEach(r=>S[r.key]=r.value)};
+ const BADGE=(t,c)=>`<span style="padding:3px 10px;border-radius:12px;font-size:12px;background:${c==="ok"?"#dff3e3":c==="off"?"#eee":"#fff3cd"}">${t}</span>`;
+ const NEW=[
+  {id:"proof",name:"إشعارات المبيعات (Social Proof)",desc:"إشعار صغير في المتجر بآخر الطلبات الحقيقية (الاسم الأول والمحافظة والمنتج). بيتاخد من طلبات فعلية في قاعدة البيانات، مفيش أرقام وهمية. بيظهر بس لو فيه 3 طلبات حقيقية على الأقل في المدة المحددة."},
+  {id:"cross",name:"البيع المتقاطع (Cross Selling)",desc:"في السلة بيظهر للعميل منتجات من نفس أقسام اللي اختاره، بزر إضافة للسلة بنفس أسعار المتجر."}];
+ const LINK=[
+  {n:"بيكسل ميتا وتيك توك",d:"تتبع الأحداث وإعلانات فيسبوك وتيك توك.",go:"apps",st:S.meta_pixel_id||S.tiktok_pixel_id?["مثبت","ok"]:["محتاج بيانات","warn"]},
+  {n:"Google Analytics 4 وTag Manager",d:"تحليل الزيارات وإدارة الأكواد.",go:"apps",st:S.ga_id||S.gtm_id?["مثبت","ok"]:["محتاج بيانات","warn"]},
+  {n:"Google Merchant وكتالوج ميتا",d:"روابط خلاصة المنتجات (feed/google.xml و feed/meta.csv).",go:"apps",st:["مثبت","ok"]},
+  {n:"الكوبونات والخصم",d:"أكواد خصم وخصم تلقائي في السلة.",go:"coupons",st:["مثبت","ok"]},
+  {n:"الحد الأدنى للشحن المجاني",d:"شحن مجاني لما قيمة الطلب توصل لحد معين.",go:"shipping",st:Number(S.free_shipping_min)>0?["مفعّل من "+S.free_shipping_min+" جنيه","ok"]:["غير مفعّل","off"]},
+  {n:"السلات المتروكة",d:"متابعة العملاء اللي سابوا السلة (واتساب يدوي).",go:"abandoned",st:["مثبت","ok"]},
+  {n:"صفحات الهبوط",d:"إنشاء صفحات بيع مخصصة.",go:"lpages",st:["مثبت","ok"]},
+  {n:"البحث الذكي",d:"بحث بالذكاء الاصطناعي في المتجر.",go:"aisearch",st:["مثبت","ok"]},
+  {n:"المشرفين بصلاحيات",d:"موظفين بصلاحيات محددة.",go:"staff",st:["مثبت","ok"]}];
+ const card=a=>{const i=on("mkt_"+a.id+"_on");return `<div class="box" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><b>${a.name}</b><div class="hint" style="margin:2px 0 0">${a.desc}</div></div>${BADGE(i?"مثبت":"غير مثبت",i?"ok":"off")}<button class="sm" data-i="${a.id}" type="button">${i?"إدارة":"تثبيت"}</button></div><div data-p="${a.id}" hidden style="margin-top:10px"></div></div>`};
+ $("view").innerHTML=`<p class="hint">أدوات التسويق. كل أداة هنا بتشتغل فعلاً على المتجر. "تثبيت" بيشغّلها، وبعده الزر يبقى "إدارة" وتفتح إعداداتها. المجاني بس.</p>
+ <h3>أدوات تثبّتها وتتحكم فيها</h3>${NEW.map(card).join("")}
+ <div class="box" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><b>منشئ روابط UTM</b><div class="hint" style="margin:2px 0 0">يعمل رابط بمصدر الحملة عشان تعرف الزيارات جاية منين في Google Analytics. أداة جاهزة، من غير تثبيت.</div></div>${BADGE("جاهز","ok")}<button class="sm" data-i="utm" type="button">فتح</button></div><div data-p="utm" hidden style="margin-top:10px"></div></div>
+ <h3>مثبّتة ومتصلة بالمتجر</h3>${LINK.map((l,k)=>`<div class="box" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><div style="flex:1"><b>${l.n}</b><div class="hint" style="margin:2px 0 0">${l.d}</div></div>${BADGE(l.st[0],l.st[1])}<button class="sm" data-g="${k}" type="button">إدارة</button></div>`).join("")}`;
+ wire($("view"),"[data-g]",b=>b.onclick=()=>go(LINK[+b.dataset.g].go));
+ const panel=id=>document.querySelector(`[data-p="${id}"]`);
+ const P={
+  proof:()=>`<label>عرض الطلبات اللي حصلت في آخر</label><select id="pr_d">${[3,7,14,30].map(n=>`<option value="${n}" ${String(val("mkt_proof_days","7"))===String(n)?"selected":""}>${n} يوم</option>`).join("")}</select><label>ثواني بين كل إشعار</label><input id="pr_s" type="number" min="8" max="120" value="${esc(val("mkt_proof_secs","20"))}"><label class="chk"><input type="checkbox" id="pr_n" ${val("mkt_proof_names","1")==="1"?"checked":""}> إظهار الاسم الأول للعميل (لو مقفول بيظهر "عميل")</label><div id="pr_c" class="hint">بيتحسب عدد الطلبات...</div><button class="sm" id="pr_save" type="button">حفظ</button> <button class="sm red" id="pr_off" type="button">إلغاء التثبيت</button> <span id="pr_m"></span>`,
+  cross:()=>`<label>عدد المنتجات المقترحة في السلة</label><select id="cr_n">${[2,3,4,6].map(n=>`<option value="${n}" ${String(val("mkt_cross_n","3"))===String(n)?"selected":""}>${n}</option>`).join("")}</select><button class="sm" id="cr_save" type="button">حفظ</button> <button class="sm red" id="cr_off" type="button">إلغاء التثبيت</button> <span id="cr_m"></span>`,
+  utm:()=>`<label>رابط الصفحة</label><input id="u_url" dir="ltr" value="${esc(location.origin)}/"><label>المصدر (utm_source) مثال: facebook</label><input id="u_s" dir="ltr" value="facebook"><label>الوسيلة (utm_medium) مثال: cpc</label><input id="u_m" dir="ltr" value="cpc"><label>اسم الحملة (utm_campaign)</label><input id="u_c" dir="ltr" placeholder="eid-offer"><label>الرابط الناتج</label><input id="u_out" dir="ltr" readonly><button class="sm" id="u_cp" type="button">نسخ</button>`};
+ const save=async(id,rows,m)=>{try{await setK(rows);flash(m,"تم الحفظ. بيظهر في المتجر خلال 5 دقايق",true)}catch(e){flash(m,"خطأ: "+e.message)}};
+ const open=id=>{const p=panel(id);p.hidden=false;p.innerHTML=P[id]();
+  if(id==="proof"){sb.rpc("recent_sales",{p_days:+$("pr_d").value,p_limit:20}).then(({data})=>{const n=(data||[]).length;$("pr_c").textContent=n>=3?"فيه "+n+" طلب حقيقي في المدة دي، فالإشعارات هتظهر.":"فيه "+n+" طلب بس في المدة دي، ومحتاج 3 على الأقل، فالإشعارات مش هتظهر لحد ما الطلبات تزيد."});
+   $("pr_save").onclick=()=>save(id,[{key:"mkt_proof_days",value:$("pr_d").value},{key:"mkt_proof_secs",value:String(Math.max(8,Math.min(120,+$("pr_s").value||20)))},{key:"mkt_proof_names",value:$("pr_n").checked?"1":"0"}],"pr_m");
+   $("pr_off").onclick=async()=>{await setK([{key:"mkt_proof_on",value:"0"}]);V.mkt()}}
+  if(id==="cross"){$("cr_save").onclick=()=>save(id,[{key:"mkt_cross_n",value:$("cr_n").value}],"cr_m");$("cr_off").onclick=async()=>{await setK([{key:"mkt_cross_on",value:"0"}]);V.mkt()}}
+  if(id==="utm"){const g=()=>{try{const u=new URL($("u_url").value.trim());[["utm_source","u_s"],["utm_medium","u_m"],["utm_campaign","u_c"]].forEach(([k,i])=>{const v=$(i).value.trim();if(v)u.searchParams.set(k,v);else u.searchParams.delete(k)});$("u_out").value=u.toString()}catch(e){$("u_out").value="الرابط غير صحيح"}};["u_url","u_s","u_m","u_c"].forEach(i=>$(i).oninput=g);g();$("u_cp").onclick=async()=>{try{await navigator.clipboard.writeText($("u_out").value)}catch(e){$("u_out").select();document.execCommand("copy")}$("u_cp").textContent="تم النسخ";setTimeout(()=>$("u_cp").textContent="نسخ",1500)}}};
+ wire($("view"),"[data-i]",b=>b.onclick=async()=>{const id=b.dataset.i;if(id!=="utm"&&!on("mkt_"+id+"_on")){try{await setK([{key:"mkt_"+id+"_on",value:"1"}])}catch(e){alert("خطأ: "+e.message);return}await V.mkt();open(id);return}const p=panel(id);if(!p.hidden){p.hidden=true;return}open(id)});
+};
 V.coupons=async()=>{
  $("view").innerHTML='<div class="box skel"></div><div class="box skel"></div>';
  const {data,error}=await sb.from("coupons").select("*").order("created_at",{ascending:false});
