@@ -35,8 +35,8 @@ export default async (req, context) => {
     const qsOf = pg => { const p = [...fq, pg > 1 ? "page=" + pg : ""].filter(Boolean); return base + (p.length ? "?" + p.join("&") : "") };
     const label = cat ? cat.name : "كل المنتجات";
     const crumbs = [["الرئيسية", "/"], ...(cat ? [[cat.name, base]] : [["كل المنتجات", base]])];
-    const title = `${label}${page > 1 ? " - صفحة " + page : ""} | ${name}`;
-    const desc = L.cut((cat && cat.description) || `تسوق ${label} من ${name} بأفضل الأسعار مع التوصيل لجميع محافظات مصر والدفع عند الاستلام.`, 160);
+    const title = `${cat ? label : "كل المنتجات: مستلزمات المطبخ والأدوات المنزلية بسعر الجملة"}${page > 1 ? " - صفحة " + page : ""} | ${name}`;
+    const desc = L.cut((cat && cat.description) || (cat ? `تسوق ${label} من ${name} بأفضل الأسعار مع التوصيل لجميع محافظات مصر والدفع عند الاستلام.` : `تصفح كل منتجات ${name}: أدوات مطبخ، رفايع، أدوات منزلية، مستلزمات تنظيف وديكور بأسعار الجملة، مع التوصيل لجميع محافظات مصر والدفع عند الاستلام.`), 160);
     const pager = pages > 1 ? `<nav class="pager">${page > 1 ? `<a class="btn gray" href="${L.esc(qsOf(page - 1))}">السابق</a>` : ""}<span>صفحة ${page} من ${pages}</span>${page < pages ? `<a class="btn gray" href="${L.esc(qsOf(page + 1))}">التالي</a>` : ""}</nav>` : "";
     const groupedHtml = () => {
       const runs = []; prods.forEach(p => { const k = p.category_id || ""; const last = runs[runs.length - 1]; if (last && last.k === k) last.l.push(p); else runs.push({ k, l: [p] }) });
