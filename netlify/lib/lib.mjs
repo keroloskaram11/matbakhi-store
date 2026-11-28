@@ -156,6 +156,7 @@ function layout({ req, S, cats, zonesList, title, desc, path, og = {}, ld = [], 
   const extraChips = navx.map(x => `<a class="chip" href="${esc(x.link)}">${esc(String(x.text).trim().slice(0, 30))}</a>`).join("");
   const chips = S.nav_chips === "0" ? "" : (cats || []).length || extraChips ? `<nav class="cats" aria-label="الأقسام"><a class="chip ${currentCat === "" ? "on" : ""}" href="/products">كل المنتجات</a>${menuCats.map(c => `<a class="chip ${currentCat === c.slug ? "on" : ""}" href="/c/${esc(encodeURIComponent(c.slug))}">${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="" width="22" height="22" loading="lazy">` : ""}${esc(c.name)}</a>`).join("")}${extraChips}</nav>` : "";
   return `<!DOCTYPE html><html lang="ar-EG" dir="rtl"><head><meta charset="utf-8">
+<meta name="google-site-verification" content="AbLgUIZeTp4ZqGAmYorNGjvvj8HTYlxlN6m_TrFEdts">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${esc(canonical)}">
