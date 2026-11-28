@@ -16,6 +16,7 @@
   /* server-side Conversions API (same event_id as the browser pixel so Meta de-duplicates). Runs only when app_meta_capi_on=1 and a token is saved in the vault. */
   const capi = (name, eid, data) => { try { if (S.app_meta_capi_on !== "1" || !window.SUPABASE_URL) return; fetch(window.SUPABASE_URL + "/rest/v1/rpc/capi_event", { method: "POST", headers: { apikey: window.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_name: name, p_event_id: eid, p_url: location.href, p_fbp: ckv("_fbp"), p_fbc: fbcv(), p_data: data || {} }), keepalive: true }).catch(() => {}) } catch (e) {} };
   window.__pvid = mkEid("pv");
+  try { const ms = document.createElement("script"); ms.src = "/mkt.js?v=1"; ms.defer = true; document.head.appendChild(ms) } catch (e) {}
   /* extra standard events: Search, AddPaymentInfo, Contact. Browser pixel + server CAPI share one event_id. */
   const std = (name, params, data) => { try { const eid = mkEid(name); if (window.fbq && S.app_meta_on !== "0") fbq("track", name, params || {}, { eventID: eid }); capi(name, eid, data || {}) } catch (e) {} };
   const cartData = () => { try { const c = (typeof cart !== "undefined" && cart) || []; return { ids: c.map(i => String(i.id)), contents: c.map(i => ({ id: String(i.id), quantity: i.qty })) } } catch (e) { return {} } };
