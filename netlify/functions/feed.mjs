@@ -15,7 +15,7 @@ export default async (req) => {
   prods = prods.filter(p => p.slug && p.name && L.safeUrl(p.image_url) && Number(p.price) > 0);
   const row = p => {
     const sale = p.sale_price != null && +p.sale_price > 0 && +p.sale_price < +p.price ? +p.sale_price : null;
-    return { id: p.id, title: String(p.name).slice(0, 150), description: clean(p.description) || String(p.name), availability: p.in_stock ? "in stock" : "out of stock", condition: "new", price: money(p.price), sale_price: sale ? money(sale) : "", link: L.pUrl(b, p), image_link: p.image_url, brand };
+    return { id: p.id, title: String(p.name).replace(/\s*\b(top quality|best quality|best seller|hot sale)\b\s*/ig, " ").replace(/\s{2,}/g, " ").trim().slice(0, 150), description: clean(p.description) || String(p.name), availability: p.in_stock ? "in stock" : "out of stock", condition: "new", price: money(p.price), sale_price: sale ? money(sale) : "", link: L.pUrl(b, p), image_link: p.image_url, brand };
   };
   const rows = prods.map(row);
   if (path.endsWith(".csv")) {
